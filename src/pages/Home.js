@@ -77,18 +77,27 @@ function Home({ currentUser }) {
                   <>
                     <Link to={`/edit-trip/${trip.id}`} className="btn btn-primary">Edit</Link>
                     <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
+                    <Link to={`/trip-chat/${trip.id}`} className="btn btn-chat">💬 Group Chat</Link>
                   </>
                 )}
                 {currentUser?.id !== trip.hostId && (
                   <>
-                    <button 
-                      onClick={() => handleJoinTrip(trip)}
-                      className="btn btn-join"
-                    >
-                      {trip.participants && trip.participants.includes(currentUser?.id) ? '✓ Joined' : '➕ Join Trip'}
-                    </button>
-                    {trip.participants && trip.participants.includes(currentUser?.id) && (
-                      <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
+                    {/* Show Join Trip button only if user hasn't joined */}
+                    {!trip.participants || !trip.participants.includes(currentUser?.id) ? (
+                      <button 
+                        onClick={() => handleJoinTrip(trip)}
+                        className="btn btn-join"
+                      >
+                        ➕ Join Trip
+                      </button>
+                    ) : (
+                      /* Show Group Chat and Navigate buttons only if user has joined */
+                      <>
+                        <Link to={`/trip-chat/${trip.id}`} className="btn btn-chat">
+                          💬 Open Group Chat
+                        </Link>
+                        <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
+                      </>
                     )}
                   </>
                 )}

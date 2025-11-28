@@ -112,6 +112,18 @@
   background-color: #059669 !important;
 }
 
+.btn-chat {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+}
+
+.btn-chat:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
 .trip-participants {
   color: #10b981;
   font-size: 13px;

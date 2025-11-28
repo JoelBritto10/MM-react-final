@@ -1,0 +1,264 @@
+.trip-chat-card {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  max-height: 90vh;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #667eea;
+  margin-bottom: 20px;
+}
+
+.chat-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.chat-header .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.chat-loading,
+.chat-error {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.chat-error {
+  background: #fee;
+  border: 1px solid #f99;
+  border-radius: 8px;
+  color: #933;
+}
+
+.participants-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.participants-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.participants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.participant-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f1ff 100%);
+  border: 1px solid #667eea;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.participant-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.host-badge {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.messages-section {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.messages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-style: italic;
+}
+
+.message-item {
+  background: white;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.message-username {
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.message-content {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.message-input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.message-input-form .btn {
+  padding: 12px 24px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.character-count {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+
+.trip-info-mini {
+  margin-top: 20px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f1ff 100%);
+  border-left: 4px solid #667eea;
+}
+
+.trip-info-mini h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.trip-info-mini p {
+  margin: 6px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.trip-date {
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Scrollbar Styling */
+.messages-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages-section::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.messages-section::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.messages-section::-webkit-scrollbar-thumb:hover {
+  background: #764ba2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .trip-chat-card {
+    height: auto;
+    max-height: none;
+  }
+
+  .chat-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .chat-header h1 {
+    font-size: 20px;
+  }
+
+  .messages-section {
+    height: 400px;
+  }
+
+  .message-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .participant-badge {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}

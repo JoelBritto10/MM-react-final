@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Map from './pages/Map';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
+import TripChat from './pages/TripChat';
 import Karma from './pages/Karma';
 import CreateTrip from './pages/CreateTrip';
 import EditTrip from './pages/EditTrip';
@@ -68,6 +69,7 @@ function App() {
             <Route path="/map" element={isAuthenticated ? <Map currentUser={currentUser} /> : <Navigate to="/login" />} />
             <Route path="/profile" element={isAuthenticated ? <Profile currentUser={currentUser} /> : <Navigate to="/login" />} />
             <Route path="/chat" element={isAuthenticated ? <Chat currentUser={currentUser} /> : <Navigate to="/login" />} />
+            <Route path="/trip-chat/:tripId" element={isAuthenticated ? <TripChat currentUser={currentUser} /> : <Navigate to="/login" />} />
             <Route path="/karma" element={isAuthenticated ? <Karma currentUser={currentUser} /> : <Navigate to="/login" />} />
             <Route path="/create-trip" element={isAuthenticated ? <CreateTrip currentUser={currentUser} /> : <Navigate to="/login" />} />
             <Route path="/edit-trip/:id" element={isAuthenticated ? <EditTrip currentUser={currentUser} /> : <Navigate to="/login" />} />
