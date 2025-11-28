@@ -1,0 +1,118 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import './Auth.css';
+
+function Signup({ onLogin }) {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Get existing users
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+
+    // Check if email already exists
+    if (users.find(u => u.email === formData.email)) {
+      setError('Email already registered');
+      return;
+    }
+
+    // Create new user
+    const newUser = {
+      id: Date.now().toString(),
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      profilePhoto: null,
+      bio: '',
+      karma: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    // Save user
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+
+    // Login and redirect
+    onLogin(newUser);
+    navigate('/home');
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>🗺️ MapMates</h1>
+        <h2>Sign Up</h2>
+        {error && <div className="alert alert-error">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Confirm Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary">Sign Up</button>
+        </form>
+        <p className="auth-link">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default Signup;
