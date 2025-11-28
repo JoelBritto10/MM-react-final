@@ -54,7 +54,6 @@ function Profile({ currentUser }) {
   const [username, setUsername] = useState(currentUser?.username || '');
   const [contact, setContact] = useState(currentUser?.contact || '');
   const [gender, setGender] = useState(currentUser?.gender || '');
-  const [interests, setInterests] = useState(currentUser?.interests || '');
   const [profileImage, setProfileImage] = useState(currentUser?.profileImage || null);
   const [imagePreview, setImagePreview] = useState(currentUser?.profileImage || null);
   const [backgroundImage, setBackgroundImage] = useState(currentUser?.backgroundImage || null);
@@ -77,7 +76,6 @@ function Profile({ currentUser }) {
         setUsername(updatedUser.username || '');
         setContact(updatedUser.contact || '');
         setGender(updatedUser.gender || '');
-        setInterests(updatedUser.interests || '');
       }
     }
   }, [currentUser?.id, isEditing]);
@@ -181,7 +179,6 @@ function Profile({ currentUser }) {
         username, 
         contact, 
         gender, 
-        interests,
         profileImage: profileImage || null,
         backgroundImage: backgroundImage || null
       };
@@ -235,6 +232,13 @@ function Profile({ currentUser }) {
               </div>
 
               <div className="info-group">
+                <label>🏆 Karma Points</label>
+                <p className="info-text" style={{ fontSize: '18px', color: '#667eea', fontWeight: 'bold' }}>
+                  {currentUser?.karma || 0}
+                </p>
+              </div>
+
+              <div className="info-group">
                 <label>📧 Email</label>
                 <p className="info-text">{currentUser?.email}</p>
               </div>
@@ -253,26 +257,12 @@ function Profile({ currentUser }) {
                 </div>
               )}
 
-              {interests && (
-                <div className="info-group">
-                  <label>⭐ Interests</label>
-                  <p className="info-text">{interests}</p>
-                </div>
-              )}
-
               {bio && (
                 <div className="info-group">
                   <label>📝 Bio</label>
                   <p className="info-text">{bio}</p>
                 </div>
               )}
-
-              <div className="info-group">
-                <label>🏆 Karma Points</label>
-                <p className="info-text" style={{ fontSize: '18px', color: '#667eea', fontWeight: '700' }}>
-                  {currentUser?.karma || 0}
-                </p>
-              </div>
             </div>
 
             <button onClick={() => setIsEditing(true)} className="btn btn-primary" style={{ marginTop: '20px', width: '100%' }}>
@@ -388,26 +378,12 @@ function Profile({ currentUser }) {
               </div>
 
               <div className="form-group">
-                <label>Interests</label>
-                <textarea
-                  value={interests}
-                  onChange={(e) => setInterests(e.target.value)}
-                  placeholder="Share your interests (e.g., hiking, photography, food)"
-                />
-              </div>
-
-              <div className="form-group">
                 <label>Bio</label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell others about yourself..."
                 />
-              </div>
-
-              <div className="form-group">
-                <label>Karma Points</label>
-                <p className="display-text"><strong>{currentUser?.karma || 0}</strong></p>
               </div>
             </div>
 

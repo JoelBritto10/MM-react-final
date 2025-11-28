@@ -10,7 +10,11 @@ function EditTrip({ currentUser }) {
     description: '',
     location: '',
     date: '',
-    mapsUrl: ''
+    time: '',
+    mapsUrl: '',
+    category: 'all',
+    maxCount: '',
+    tripType: 'group'
   });
 
   useEffect(() => {
@@ -83,16 +87,78 @@ function EditTrip({ currentUser }) {
               required
             />
           </div>
-          <div className="form-group">
-            <label>Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-            />
+          <div className="form-group-row">
+            <div className="form-group">
+              <label>Date</label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Time</label>
+              <input
+                type="time"
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+              />
+            </div>
           </div>
+
+          <div className="form-group">
+            <label>Trip Category</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="category-select"
+            >
+              <option value="all">🌍 All</option>
+              <option value="beach">🏖️ Beach</option>
+              <option value="mountain">⛰️ Mountain</option>
+              <option value="city">🏙️ City</option>
+              <option value="adventure">🎯 Adventure</option>
+              <option value="culture">🎭 Culture</option>
+              <option value="sports">⚽ Sports</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>👥 Max Participants (Optional)</label>
+            <input
+              type="number"
+              name="maxCount"
+              value={formData.maxCount}
+              onChange={handleChange}
+              placeholder="Maximum number of members allowed (leave blank for unlimited)"
+              min="1"
+              max="999"
+            />
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+              Leave blank for unlimited participants
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label>👫 Trip Type</label>
+            <select
+              name="tripType"
+              value={formData.tripType}
+              onChange={handleChange}
+              className="category-select"
+            >
+              <option value="group">👥 Group Trip (Friends & Singles)</option>
+              <option value="couples">👫 Couples Only</option>
+            </select>
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+              Choose who can join this trip
+            </p>
+          </div>
+
           <div className="form-group">
             <label>Google Maps URL</label>
             <input

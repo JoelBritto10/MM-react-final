@@ -42,9 +42,15 @@ function CreateTrip({ currentUser }) {
     description: '',
     location: '',
     date: '',
+    time: '',
     mapsUrl: '',
-    image: null
+    image: null,
+    category: 'all',
+    maxCount: '',
+    tripType: 'group'
   });
+
+  const categories = ['all', 'beach', 'mountain', 'city', 'adventure', 'culture', 'sports'];
 
   const [userLocation, setUserLocation] = useState({ lat: 37.7749, lng: -122.4194 });
   const [urlInput, setUrlInput] = useState('');
@@ -150,11 +156,13 @@ function CreateTrip({ currentUser }) {
       description: formData.description,
       location: formData.location,
       date: formData.date,
+      time: formData.time,
       mapsUrl: formData.mapsUrl,
       hostId: currentUser.id,
       hostName: currentUser.username,
       participants: [],
       image: formData.image,
+      category: formData.category,
       createdAt: new Date().toISOString()
     };
 
@@ -213,15 +221,78 @@ function CreateTrip({ currentUser }) {
             />
           </div>
 
+          <div className="form-group-row">
+            <div className="form-group">
+              <label>Date *</label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Time *</label>
+              <input
+                type="time"
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
           <div className="form-group">
-            <label>Date *</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
+            <label>Trip Category</label>
+            <select
+              name="category"
+              value={formData.category}
               onChange={handleChange}
-              required
+              className="category-select"
+            >
+              <option value="all">🌍 All</option>
+              <option value="beach">🏖️ Beach</option>
+              <option value="mountain">⛰️ Mountain</option>
+              <option value="city">🏙️ City</option>
+              <option value="adventure">🎯 Adventure</option>
+              <option value="culture">🎭 Culture</option>
+              <option value="sports">⚽ Sports</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>👥 Max Participants (Optional)</label>
+            <input
+              type="number"
+              name="maxCount"
+              value={formData.maxCount}
+              onChange={handleChange}
+              placeholder="Maximum number of members allowed (leave blank for unlimited)"
+              min="1"
+              max="999"
             />
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+              Leave blank for unlimited participants
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label>👫 Trip Type</label>
+            <select
+              name="tripType"
+              value={formData.tripType}
+              onChange={handleChange}
+              className="category-select"
+            >
+              <option value="group">👥 Group Trip (Friends & Singles)</option>
+              <option value="couples">👫 Couples Only</option>
+            </select>
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+              Choose who can join this trip
+            </p>
           </div>
 
           {/* Image Upload Section */}

@@ -21,6 +21,7 @@ function Navbar({ onLogout, currentUser }) {
           <Link to="/map" className="nav-link">Map</Link>
           <Link to="/chat" className="nav-link">Messages</Link>
           <Link to="/karma" className="nav-link">Karma</Link>
+          <Link to="/feedback" className="nav-link">📋 Feedback</Link>
           <Link to="/profile" className="nav-link">Profile</Link>
           <button onClick={handleLogout} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             Logout

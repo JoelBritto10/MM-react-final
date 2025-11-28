@@ -99,6 +99,12 @@ function Map({ currentUser }) {
       return;
     }
 
+    // Check if trip is at max capacity
+    if (trip.maxCount && trip.participants && trip.participants.length >= trip.maxCount) {
+      alert('This trip is full! No more participants can join.');
+      return;
+    }
+
     // Add user to participants
     const updatedTrips = trips.map(t => {
       if (t.id === trip.id) {
@@ -125,7 +131,12 @@ function Map({ currentUser }) {
   }
 
   const tripsWithDistance = trips
-    .filter(t => t.mapsUrl || (t.latitude && t.longitude))
+    .filter(t => {
+      // Only show trips if user is the host or has joined
+      const isHost = t.hostId === currentUser?.id;
+      const hasJoined = t.participants && t.participants.includes(currentUser?.id);
+      return (t.mapsUrl || (t.latitude && t.longitude)) && (isHost || hasJoined);
+    })
     .map(trip => {
       const lat = trip.latitude || extractLatFromUrl(trip.mapsUrl);
       const lng = trip.longitude || extractLngFromUrl(trip.mapsUrl);
@@ -145,17 +156,14 @@ function Map({ currentUser }) {
     <div className="container">
       <h1>📍 Discover Trips Near You</h1>
       
-      <div className="location-info card">
+      <div className="location-info">
         <div className="location-info-content">
-          <h3>📍 Your Location</h3>
-          <a 
-            href={`https://www.google.com/maps/@${userLocation.lat},${userLocation.lng},15z`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-small"
-          >
-            View on Map →
-          </a>
+          <h3>📍 {userLocation.name}</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <a href={`https://www.google.com/maps/?q=${userLocation.lat},${userLocation.lng}`} target="_blank" rel="noopener noreferrer" className="btn btn-small">
+              🗺️ Open in Maps
+            </a>
+          </div>
         </div>
       </div>
 
@@ -166,77 +174,120 @@ function Map({ currentUser }) {
         ) : (
           <div className="trips-grid">
             {tripsWithDistance.map(trip => {
-              const isSelected = selectedTripId === trip.id;
+              const isHost = trip.hostId === currentUser?.id;
+              const hasJoined = trip.participants && trip.participants.includes(currentUser?.id);
+              const mapUrl = generateMapUrlForTrip(trip);
+
               return (
-                <div 
+                <div
                   key={trip.id}
-                  className={`trip-flip-card ${isSelected ? 'flipped' : ''}`}
+                  className={`trip-flip-card ${selectedTripId === trip.id ? 'flipped' : ''}`}
+                  onClick={() => setSelectedTripId(selectedTripId === trip.id ? null : trip.id)}
                 >
-                  {/* Front of card */}
-                  <div className="trip-flip-front">
-                    <div 
-                      className="trip-item card"
-                      style={{ cursor: 'pointer', height: '100%' }}
-                    >
-                      {trip.image && (
-                        <div className="trip-image-container">
-                          <img src={trip.image} alt={trip.title} className="trip-image" />
+                  {/* Front of card - Trip Info */}
+                  <div className="trip-flip-front card">
+                    {trip.image && (
+                      <div className="trip-image-container">
+                        <img src={trip.image} alt={trip.title} className="trip-image" />
+                      </div>
+                    )}
+                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <div className="trip-header">
+                        <div className="trip-title-section">
+                          <h4>{trip.title}</h4>
+                          {trip.participants && trip.participants.length > 0 && (
+                            <span className="participants-badge">
+                              👥 {trip.participants.length} joined
+                            </span>
+                          )}
                         </div>
-                      )}
-                      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <div className="trip-header">
-                          <div className="trip-title-section">
-                            <h4>{trip.title}</h4>
-                            {trip.participants && trip.participants.length > 0 && (
-                              <span className="participants-badge">
-                                👥 {trip.participants.length} joined
+                        <span className="distance-badge">
+                          📏 {trip.distance} mi
+                        </span>
+                      </div>
+                      <p className="trip-location">📍 {trip.location}</p>
+                      <p className="trip-date">📅 {trip.date}</p>
+                      <div style={{ marginTop: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {!isHost && !hasJoined && (
+                          <>
+                            {trip.maxCount && trip.participants && trip.participants.length >= trip.maxCount ? (
+                              <button 
+                                className="btn btn-join"
+                                disabled
+                                style={{ opacity: '0.5', cursor: 'not-allowed', backgroundColor: '#ccc' }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                🚫 Trip is Full
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn btn-join"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJoinTrip(trip);
+                                }}
+                              >
+                                ➕ Join Trip
+                              </button>
+                            )}
+                            {trip.maxCount && (
+                              <span style={{ fontSize: '12px', color: '#999' }}>
+                                {trip.participants?.length || 0}/{trip.maxCount}
                               </span>
                             )}
-                          </div>
-                          <span className="distance-badge">
-                            📏 {trip.distance} mi
-                          </span>
-                        </div>
-                        <p className="trip-location">📍 {trip.location}</p>
-                        <p className="trip-date">📅 {trip.date}</p>
-                        <button 
-                          className="btn btn-directions"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTripId(trip.id);
-                          }}
-                          style={{ width: '100%', marginTop: 'auto' }}
-                        >
-                          🧭 View Directions
-                        </button>
+                          </>
+                        )}
+                        {hasJoined && (
+                          <button 
+                            className="btn btn-directions"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (mapUrl) window.open(mapUrl, '_blank');
+                            }}
+                          >
+                            🧭 Directions
+                          </button>
+                        )}
+                        {isHost && (
+                          <button 
+                            className="btn btn-directions"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (mapUrl) window.open(mapUrl, '_blank');
+                            }}
+                          >
+                            🧭 Directions
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Back of card */}
-                  <div className="trip-flip-back">
-                    <a 
-                      href={generateMapUrlForTrip(trip)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="map-embedded-link"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Close the flip after a short delay to show the animation
-                        setTimeout(() => setSelectedTripId(null), 500);
-                      }}
-                    >
-                      <div className="trip-map-preview" style={{ height: '100%' }}>
-                        <div className="map-placeholder">
-                          <p>📍 {trip.title}</p>
-                          <p className="map-coordinates">
-                            {extractLatFromUrl(trip.mapsUrl) || trip.latitude}, {extractLngFromUrl(trip.mapsUrl) || trip.longitude}
-                          </p>
-                          <p className="map-distance">Distance: {trip.distance} miles</p>
-                          <p className="click-to-view">👆 Click to view directions on Google Maps</p>
-                        </div>
+                  {/* Back of card - Trip Details */}
+                  <div className="trip-flip-back card">
+                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100%', justifyContent: 'center' }}>
+                      <h4 style={{ margin: '0 0 12px 0' }}>{trip.title}</h4>
+                      <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                        📍 {trip.location}
+                      </p>
+                      <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                        📅 {trip.date}
+                      </p>
+                      {trip.description && (
+                        <p style={{ margin: '8px 0', fontSize: '13px', color: '#666' }}>
+                          {trip.description}
+                        </p>
+                      )}
+                      <p style={{ margin: '8px 0', fontSize: '13px', color: '#999' }}>
+                        📏 {trip.distance} miles away
+                      </p>
+                      <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#999' }}>
+                        👥 {trip.participants?.length || 0} members joined
+                      </p>
+                      <div style={{ marginTop: '12px', fontSize: '12px', color: '#ccc' }}>
+                        Click to flip
                       </div>
-                    </a>
+                    </div>
                   </div>
                 </div>
               );
