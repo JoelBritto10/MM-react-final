@@ -233,8 +233,6 @@ function Profile({ currentUser }) {
       setSaved(false);
     }
   };
-    }
-  };
 
   return (
     <div className="container">
