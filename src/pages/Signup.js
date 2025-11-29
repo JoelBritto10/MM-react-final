@@ -40,21 +40,58 @@ function Signup({ onLogin }) {
     }
 
     try {
-      // Register with Firebase
-      const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
+      // Try Firebase first
+      try {
+        const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
 
-      // Get user profile from Firestore
-      const userProfile = await getUserProfile(firebaseUser.uid);
+        // Get user profile from Firestore
+        const userProfile = await getUserProfile(firebaseUser.uid);
 
-      const userData = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        ...userProfile
-      };
+        const userData = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email,
+          ...userProfile
+        };
 
-      // Login and redirect
-      onLogin(userData);
-      navigate('/home');
+        // Login and redirect
+        onLogin(userData);
+        navigate('/home');
+      } catch (firebaseError) {
+        // If Firebase Auth is not enabled, use localStorage fallback
+        if (firebaseError.code === 'auth/operation-not-allowed') {
+          console.warn('Firebase Email/Password not enabled. Using localStorage fallback.');
+          
+          // Fallback to localStorage
+          const users = JSON.parse(localStorage.getItem('users')) || [];
+          
+          // Check if email already exists
+          if (users.find(u => u.email === formData.email)) {
+            setError('Email already registered');
+            setLoading(false);
+            return;
+          }
+          
+          // Create new user
+          const newUser = {
+            id: Date.now().toString(),
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            karma: 0,
+            createdAt: new Date().toISOString()
+          };
+          
+          // Save user
+          users.push(newUser);
+          localStorage.setItem('users', JSON.stringify(users));
+          
+          // Login and redirect
+          onLogin(newUser);
+          navigate('/home');
+        } else {
+          throw firebaseError;
+        }
+      }
     } catch (err) {
       console.error('Signup error:', err);
       if (err.code === 'auth/email-already-in-use') {
@@ -63,6 +100,8 @@ function Signup({ onLogin }) {
         setError('Invalid email format');
       } else if (err.code === 'auth/weak-password') {
         setError('Password is too weak. Use at least 6 characters.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('⚠️ Email/Password auth not enabled in Firebase. Please check Firebase Console → Authentication → Sign-in method → Enable Email/Password');
       } else {
         setError(err.message || 'Signup failed. Please try again.');
       }
