@@ -62,6 +62,18 @@ function Login({ onLogin }) {
         setError('Incorrect password.');
       } else if (err.code === 'auth/invalid-email') {
         setError('Invalid email format.');
+      } else if (err.code === 'auth/invalid-credential') {
+        // Try localStorage fallback as last resort
+        console.warn('Firebase credentials invalid. Attempting localStorage fallback...');
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(u => u.email === email && u.password === password);
+        
+        if (user) {
+          onLogin(user);
+          navigate('/home');
+          return;
+        }
+        setError('Invalid email or password. Please check your credentials.');
       } else if (err.code === 'auth/operation-not-allowed') {
         setError('⚠️ Email/Password auth not enabled in Firebase. Please check Firebase Console → Authentication → Sign-in method → Enable Email/Password');
       } else {

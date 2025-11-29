@@ -100,6 +100,8 @@ function Signup({ onLogin }) {
         setError('Invalid email format');
       } else if (err.code === 'auth/weak-password') {
         setError('Password is too weak. Use at least 6 characters.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Invalid Firebase credentials. Check your .env.local file and restart the app.');
       } else if (err.code === 'auth/operation-not-allowed') {
         setError('⚠️ Email/Password auth not enabled in Firebase. Please check Firebase Console → Authentication → Sign-in method → Enable Email/Password');
       } else {
