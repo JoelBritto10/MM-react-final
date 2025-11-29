@@ -22,14 +22,15 @@ function Login({ onLogin }) {
         const firebaseUser = await loginUser(email, password);
         console.log('✅ Logged in to Firebase:', firebaseUser.uid);
 
-        // Get user profile from Firestore
+        // Get user profile from Firestore (may be null if not created yet)
         const userProfile = await getUserProfile(firebaseUser.uid);
 
         const userData = {
           id: firebaseUser.uid,
           email: firebaseUser.email,
-          username: userProfile?.username || 'User',
-          ...userProfile
+          username: userProfile?.username || firebaseUser.email.split('@')[0],
+          karma: userProfile?.karma || 0,
+          ...(userProfile || {})
         };
 
         // Login successful

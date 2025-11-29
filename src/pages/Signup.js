@@ -46,14 +46,15 @@ function Signup({ onLogin }) {
         const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
         console.log('✅ User created in Firebase:', firebaseUser.uid);
 
-        // Get user profile from Firestore
+        // Get user profile from Firestore (should exist now after registerUser creates it)
         const userProfile = await getUserProfile(firebaseUser.uid);
 
         const userData = {
           id: firebaseUser.uid,
           email: firebaseUser.email,
           username: formData.username,
-          ...userProfile
+          karma: 0,
+          ...(userProfile || {})
         };
 
         // Login and redirect

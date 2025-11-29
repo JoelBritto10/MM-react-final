@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditTrip.css';
+import { uploadTripImage } from '../firebaseUtils';
 
 function EditTrip({ currentUser }) {
   const { id } = useParams();
@@ -33,14 +34,29 @@ function EditTrip({ currentUser }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    let tripImageURL = formData.image;
+
+    // Upload new image to Firebase if it's a base64 string (new upload)
+    if (formData.image && formData.image.startsWith('data:')) {
+      try {
+        console.log('📤 Uploading updated trip image to Firebase...');
+        tripImageURL = await uploadTripImage(id, formData.image, currentUser.id);
+        console.log('✅ Trip image uploaded to Firebase');
+      } catch (uploadError) {
+        console.error('Error uploading trip image:', uploadError);
+        alert('Error uploading trip image. Continuing with existing image.');
+      }
+    }
 
     const trips = JSON.parse(localStorage.getItem('trips')) || [];
     const updatedTrips = trips.map(t =>
-      t.id === id ? { ...t, ...formData } : t
+      t.id === id ? { ...t, ...formData, image: tripImageURL } : t
     );
     localStorage.setItem('trips', JSON.stringify(updatedTrips));
+    alert('✅ Trip updated successfully!');
     navigate('/home');
   };
 

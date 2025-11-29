@@ -17,7 +17,13 @@ import {
   addDoc,
   orderBy,
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import {
+  ref,
+  uploadString,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage';
+import { auth, db, storage } from './firebase';
 
 // ============= AUTHENTICATION =============
 
@@ -76,8 +82,8 @@ export const getUserProfile = async (uid) => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting user profile:', error);
-    throw error;
+    console.warn('User profile not found or error accessing Firestore:', error.message);
+    return null; // Return null instead of throwing - user may not have profile yet
   }
 };
 
@@ -308,5 +314,125 @@ export const leaveTrip = async (tripId, userId) => {
   } catch (error) {
     console.error('Error leaving trip:', error);
     throw error;
+  }
+};
+
+// ============= IMAGE STORAGE (Firebase Storage & Firestore) =============
+
+/**
+ * Upload user profile image to Firebase Storage and save URL to Firestore
+ * @param {string} uid - User ID
+ * @param {string} base64Image - Base64 encoded image string
+ * @param {string} imageType - 'profile' or 'background'
+ * @returns {Promise<string>} Download URL of uploaded image
+ */
+export const uploadUserImage = async (uid, base64Image, imageType = 'profile') => {
+  try {
+    if (!uid) throw new Error('User ID is required');
+    if (!base64Image) throw new Error('Image data is required');
+
+    // Create a reference to the image file in Storage
+    const timestamp = Date.now();
+    const fileName = `${uid}/${imageType}-${timestamp}.jpg`;
+    const imageRef = ref(storage, `user-images/${fileName}`);
+
+    console.log(`📤 Uploading ${imageType} image to Firebase Storage...`);
+
+    // Upload the image as base64 string
+    await uploadString(imageRef, base64Image, 'data_url');
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(imageRef);
+    console.log(`✅ Image uploaded successfully: ${downloadURL}`);
+
+    // Save the image URL to Firestore user profile
+    const updateData = {};
+    updateData[`${imageType}Image`] = downloadURL;
+    updateData[`${imageType}ImagePath`] = fileName; // Store path for deletion purposes
+
+    await updateUserProfile(uid, updateData);
+    console.log(`✅ Image URL saved to Firestore`);
+
+    return downloadURL;
+  } catch (error) {
+    console.error(`Error uploading ${imageType} image:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Upload trip image to Firebase Storage and save URL to Firestore
+ * @param {string} tripId - Trip ID
+ * @param {string} base64Image - Base64 encoded image string
+ * @param {string} userId - User ID (for organizing in storage)
+ * @returns {Promise<string>} Download URL of uploaded image
+ */
+export const uploadTripImage = async (tripId, base64Image, userId) => {
+  try {
+    if (!tripId || !base64Image || !userId) {
+      throw new Error('Trip ID, image data, and User ID are required');
+    }
+
+    // Create a reference to the image file
+    const timestamp = Date.now();
+    const fileName = `${tripId}-${timestamp}.jpg`;
+    const imageRef = ref(storage, `trip-images/${userId}/${fileName}`);
+
+    console.log(`📤 Uploading trip image to Firebase Storage...`);
+
+    // Upload the image
+    await uploadString(imageRef, base64Image, 'data_url');
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(imageRef);
+    console.log(`✅ Trip image uploaded successfully: ${downloadURL}`);
+
+    // Update trip with image URL in Firestore
+    await updateTrip(tripId, {
+      tripImage: downloadURL,
+      tripImagePath: fileName, // Store path for deletion purposes
+    });
+    console.log(`✅ Trip image URL saved to Firestore`);
+
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading trip image:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an image from Firebase Storage
+ * @param {string} imagePath - Path to the image in storage
+ * @returns {Promise<void>}
+ */
+export const deleteImage = async (imagePath) => {
+  try {
+    if (!imagePath) return;
+    
+    const imageRef = ref(storage, `user-images/${imagePath}`);
+    await deleteObject(imageRef);
+    console.log(`✅ Image deleted from Firebase Storage`);
+  } catch (error) {
+    // Image might not exist, which is fine
+    console.warn('Image deletion warning:', error.message);
+  }
+};
+
+/**
+ * Delete a trip image from Firebase Storage
+ * @param {string} tripImagePath - Path to the trip image in storage
+ * @returns {Promise<void>}
+ */
+export const deleteTripImage = async (tripImagePath) => {
+  try {
+    if (!tripImagePath) return;
+    
+    const imageRef = ref(storage, `trip-images/${tripImagePath}`);
+    await deleteObject(imageRef);
+    console.log(`✅ Trip image deleted from Firebase Storage`);
+  } catch (error) {
+    // Image might not exist, which is fine
+    console.warn('Trip image deletion warning:', error.message);
   }
 };

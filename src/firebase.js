@@ -4,7 +4,6 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Firebase configuration
-// TODO: Replace with your actual Firebase config from Firebase Console
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyDemoBuild",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "mapmates-demo.firebaseapp.com",
@@ -14,8 +13,21 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:123456789:web:abc123def456"
 };
 
+console.log('🔥 Firebase Config:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  hasApiKey: !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "AIzaSyDemoBuild"
+});
+
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+  console.log('✅ Firebase app initialized successfully');
+} catch (error) {
+  console.error('❌ Firebase initialization error:', error);
+  throw error;
+}
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);

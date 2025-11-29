@@ -24,27 +24,32 @@ function App() {
   useEffect(() => {
     // Listen for Firebase auth state changes
     const unsubscribe = onAuthChange(async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Get user profile from Firestore
+      try {
+        if (firebaseUser) {
+          // Get user profile from Firestore (may return null)
           const userProfile = await getUserProfile(firebaseUser.uid);
+          
           const userData = {
             id: firebaseUser.uid,
             email: firebaseUser.email,
-            ...userProfile
+            username: userProfile?.username || firebaseUser.email.split('@')[0],
+            karma: userProfile?.karma || 0,
+            ...(userProfile || {})
           };
           setCurrentUser(userData);
           setIsAuthenticated(true);
           localStorage.setItem('currentUser', JSON.stringify(userData));
-        } catch (error) {
-          console.error('Error loading user profile:', error);
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem('currentUser');
         }
-      } else {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem('currentUser');
+      } catch (error) {
+        console.error('Error in auth state change:', error);
+        setLoading(false);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     // Cleanup subscription on unmount

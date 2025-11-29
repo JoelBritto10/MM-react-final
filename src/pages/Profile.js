@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
+import { uploadUserImage } from '../firebaseUtils';
 
 // Utility function to compress image
 const compressImage = (base64String, maxWidth = 300, maxHeight = 300, quality = 0.7) => {
@@ -170,8 +171,41 @@ function Profile({ currentUser }) {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
+      setSaved(true); // Show saving state
+      let profileImageURL = profileImage;
+      let backgroundImageURL = backgroundImage;
+
+      // Upload profile image to Firebase if it's a new base64 image (not a URL)
+      if (profileImage && profileImage.startsWith('data:')) {
+        try {
+          console.log('📤 Uploading profile image to Firebase...');
+          profileImageURL = await uploadUserImage(currentUser.id, profileImage, 'profile');
+          console.log('✅ Profile image uploaded to Firebase');
+        } catch (uploadError) {
+          console.error('Error uploading profile image:', uploadError);
+          alert('Error uploading profile image. Please try again.');
+          setSaved(false);
+          return;
+        }
+      }
+
+      // Upload background image to Firebase if it's a new base64 image (not a URL)
+      if (backgroundImage && backgroundImage.startsWith('data:')) {
+        try {
+          console.log('📤 Uploading background image to Firebase...');
+          backgroundImageURL = await uploadUserImage(currentUser.id, backgroundImage, 'background');
+          console.log('✅ Background image uploaded to Firebase');
+        } catch (uploadError) {
+          console.error('Error uploading background image:', uploadError);
+          alert('Error uploading background image. Please try again.');
+          setSaved(false);
+          return;
+        }
+      }
+
+      // Update local storage with new image URLs
       const users = JSON.parse(localStorage.getItem('users')) || [];
       const updatedUser = { 
         ...currentUser, 
@@ -179,16 +213,15 @@ function Profile({ currentUser }) {
         username, 
         contact, 
         gender, 
-        profileImage: profileImage || null,
-        backgroundImage: backgroundImage || null
+        profileImage: profileImageURL || null,
+        backgroundImage: backgroundImageURL || null
       };
       const updatedUsers = users.map(u => 
         u.id === currentUser.id ? updatedUser : u
       );
       localStorage.setItem('users', JSON.stringify(updatedUsers));
-      // Also update currentUser in localStorage to persist changes across sessions
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      setSaved(true);
+      
       setIsEditing(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {

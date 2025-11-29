@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CreateTrip.css';
+import { uploadTripImage } from '../firebaseUtils';
 
 // Utility function to compress image
 const compressImage = (base64String, maxWidth = 400, maxHeight = 400, quality = 0.65) => {
@@ -142,7 +143,7 @@ function CreateTrip({ currentUser }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.mapsUrl) {
@@ -150,34 +151,56 @@ function CreateTrip({ currentUser }) {
       return;
     }
 
-    const newTrip = {
-      id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      location: formData.location,
-      date: formData.date,
-      time: formData.time,
-      mapsUrl: formData.mapsUrl,
-      hostId: currentUser.id,
-      hostName: currentUser.username,
-      participants: [],
-      image: formData.image,
-      category: formData.category,
-      createdAt: new Date().toISOString()
-    };
+    let tripImageURL = null;
 
     try {
-      const trips = JSON.parse(localStorage.getItem('trips')) || [];
-      trips.push(newTrip);
-      localStorage.setItem('trips', JSON.stringify(trips));
-      navigate('/home');
-    } catch (error) {
-      if (error.name === 'QuotaExceededError') {
-        alert('Storage quota exceeded. Please use a smaller image or remove the image.');
-      } else {
-        alert('Error creating trip. Please try again.');
+      // Upload trip image to Firebase if present
+      if (formData.image) {
+        try {
+          console.log('📤 Uploading trip image to Firebase...');
+          const tripId = Date.now().toString();
+          tripImageURL = await uploadTripImage(tripId, formData.image, currentUser.id);
+          console.log('✅ Trip image uploaded to Firebase');
+        } catch (uploadError) {
+          console.error('Error uploading trip image:', uploadError);
+          alert('Error uploading trip image. Creating trip without image.');
+          // Continue without image
+        }
       }
-      console.error('Create trip error:', error);
+
+      const newTrip = {
+        id: Date.now().toString(),
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        date: formData.date,
+        time: formData.time,
+        mapsUrl: formData.mapsUrl,
+        hostId: currentUser.id,
+        hostName: currentUser.username,
+        participants: [],
+        image: tripImageURL || null, // Use Firebase URL if available
+        category: formData.category,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        const trips = JSON.parse(localStorage.getItem('trips')) || [];
+        trips.push(newTrip);
+        localStorage.setItem('trips', JSON.stringify(trips));
+        alert('✅ Trip created successfully! Image stored in Firebase.');
+        navigate('/home');
+      } catch (error) {
+        if (error.name === 'QuotaExceededError') {
+          alert('Storage quota exceeded. Please use a smaller image or remove the image.');
+        } else {
+          alert('Error creating trip. Please try again.');
+        }
+        console.error('Create trip error:', error);
+      }
+    } catch (error) {
+      alert('Error processing trip. Please try again.');
+      console.error('Submit error:', error);
     }
   };
 
