@@ -50,7 +50,7 @@ const compressImage = (base64String, maxWidth = 300, maxHeight = 300, quality = 
   });
 };
 
-function Profile({ currentUser }) {
+function Profile({ currentUser, onUpdateUser }) {
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [username, setUsername] = useState(currentUser?.username || '');
   const [contact, setContact] = useState(currentUser?.contact || '');
@@ -173,7 +173,6 @@ function Profile({ currentUser }) {
 
   const handleSave = async () => {
     try {
-      setSaved(true); // Show saving state
       let profileImageURL = profileImage;
       let backgroundImageURL = backgroundImage;
 
@@ -185,7 +184,6 @@ function Profile({ currentUser }) {
           console.log('✅ Profile image uploaded to Firebase');
         } catch (uploadError) {
           console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
-          // If Firebase fails, keep the base64 image in localStorage
           profileImageURL = profileImage;
         }
       }
@@ -198,7 +196,6 @@ function Profile({ currentUser }) {
           console.log('✅ Background image uploaded to Firebase');
         } catch (uploadError) {
           console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
-          // If Firebase fails, keep the base64 image in localStorage
           backgroundImageURL = backgroundImage;
         }
       }
@@ -220,9 +217,24 @@ function Profile({ currentUser }) {
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       
+      // Update parent component's currentUser state
+      if (onUpdateUser) {
+        onUpdateUser(updatedUser);
+      }
+      
+      // Update local state with the saved images to immediately reflect changes
+      setProfileImage(profileImageURL || null);
+      setImagePreview(profileImageURL || null);
+      setBackgroundImage(backgroundImageURL || null);
+      setBackgroundPreview(backgroundImageURL || null);
+      
+      setSaved(true);
+      setTimeout(() => {
+        setIsEditing(false);
+        setSaved(false);
+      }, 1500);
+      
       alert('✅ Profile saved successfully!');
-      setIsEditing(false);
-      setTimeout(() => setSaved(false), 2000);
     } catch (error) {
       if (error.name === 'QuotaExceededError') {
         alert('Storage quota exceeded. Please use smaller images.');

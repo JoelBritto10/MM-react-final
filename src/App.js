@@ -62,6 +62,11 @@ function App() {
     localStorage.setItem('currentUser', JSON.stringify(user));
   };
 
+  const handleUpdateUser = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+  };
+
   const handleLogout = async () => {
     try {
       await logoutUser();
@@ -87,7 +92,7 @@ function App() {
               <Route path="/" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/home" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/map" element={isAuthenticated ? <Map currentUser={currentUser} /> : <Navigate to="/login" />} />
-              <Route path="/profile" element={isAuthenticated ? <Profile currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/profile" element={isAuthenticated ? <Profile currentUser={currentUser} onUpdateUser={handleUpdateUser} /> : <Navigate to="/login" />} />
               <Route path="/chat" element={isAuthenticated ? <Chat currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/trip-chat/:tripId" element={isAuthenticated ? <TripChat currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/karma" element={isAuthenticated ? <Karma currentUser={currentUser} /> : <Navigate to="/login" />} />
