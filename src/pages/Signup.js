@@ -41,13 +41,9 @@ function Signup({ onLogin }) {
 
     try {
       // Try Firebase first
-      let firebaseUser = null;
-      let createdInFirebase = false;
-
       try {
         console.log('Attempting to create user in Firebase...');
-        firebaseUser = await registerUser(formData.email, formData.password, formData.username);
-        createdInFirebase = true;
+        const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
         console.log('✅ User created in Firebase:', firebaseUser.uid);
 
         // Get user profile from Firestore
