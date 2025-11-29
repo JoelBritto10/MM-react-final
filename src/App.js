@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthChange, logoutUser, getUserProfile } from './firebaseUtils';
 import './App.css';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
@@ -22,38 +21,18 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for Firebase auth state changes
-    const unsubscribe = onAuthChange(async (firebaseUser) => {
+    // Check localStorage for existing session on app load
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
       try {
-        if (firebaseUser) {
-          // Get user profile from Firestore (may return null)
-          const userProfile = await getUserProfile(firebaseUser.uid);
-          
-          const userData = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email,
-            username: userProfile?.username || firebaseUser.email.split('@')[0],
-            karma: userProfile?.karma || 0,
-            ...(userProfile || {})
-          };
-          setCurrentUser(userData);
-          setIsAuthenticated(true);
-          localStorage.setItem('currentUser', JSON.stringify(userData));
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-          localStorage.removeItem('currentUser');
-        }
+        const userData = JSON.parse(storedUser);
+        setCurrentUser(userData);
+        setIsAuthenticated(true);
       } catch (error) {
-        console.error('Error in auth state change:', error);
-        setLoading(false);
-      } finally {
-        setLoading(false);
+        console.error('Error parsing stored user:', error);
       }
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
   const handleLogin = (user) => {
@@ -67,15 +46,10 @@ function App() {
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
   };
 
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-      setCurrentUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem('currentUser');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('currentUser');
   };
 
   return (

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CreateTrip.css';
-import { uploadTripImage } from '../firebaseUtils';
 
 // Utility function to compress image
 const compressImage = (base64String, maxWidth = 400, maxHeight = 400, quality = 0.65) => {
@@ -154,19 +153,8 @@ function CreateTrip({ currentUser }) {
     let tripImageURL = null;
 
     try {
-      // Upload trip image to Firebase if present
-      if (formData.image) {
-        try {
-          console.log('📤 Uploading trip image to Firebase...');
-          const tripId = Date.now().toString();
-          tripImageURL = await uploadTripImage(tripId, formData.image, currentUser.id);
-          console.log('✅ Trip image uploaded to Firebase');
-        } catch (uploadError) {
-          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
-          // If Firebase fails, keep the base64 image in localStorage
-          tripImageURL = formData.image;
-        }
-      }
+      // Use the image as-is (base64)
+      tripImageURL = formData.image;
 
       const newTrip = {
         id: Date.now().toString(),
@@ -179,7 +167,7 @@ function CreateTrip({ currentUser }) {
         hostId: currentUser.id,
         hostName: currentUser.username,
         participants: [],
-        image: tripImageURL || null, // Use Firebase URL if available, otherwise base64
+        image: tripImageURL || null,
         category: formData.category,
         createdAt: new Date().toISOString()
       };

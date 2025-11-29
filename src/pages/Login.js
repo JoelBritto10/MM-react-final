@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginUser, getUserProfile } from '../firebaseUtils';
 import './Auth.css';
 
 function Login({ onLogin }) {
@@ -16,66 +15,21 @@ function Login({ onLogin }) {
     setError('');
 
     try {
-      // Try Firebase first
-      try {
-        console.log('Attempting to login with Firebase...');
-        const firebaseUser = await loginUser(email, password);
-        console.log('✅ Logged in to Firebase:', firebaseUser.uid);
-
-        // Get user profile from Firestore (may be null if not created yet)
-        const userProfile = await getUserProfile(firebaseUser.uid);
-
-        const userData = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email,
-          username: userProfile?.username || firebaseUser.email.split('@')[0],
-          karma: userProfile?.karma || 0,
-          ...(userProfile || {})
-        };
-
+      // Get users from localStorage
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      const user = users.find(u => u.email === email && u.password === password);
+      
+      if (user) {
         // Login successful
-        onLogin(userData);
+        onLogin(user);
         setError('');
         navigate('/home');
-      } catch (firebaseError) {
-        console.error('Firebase login error:', firebaseError.code, firebaseError.message);
-        
-        // Try localStorage fallback for specific errors
-        if (firebaseError.code === 'auth/operation-not-allowed' || 
-            firebaseError.code === 'auth/network-request-failed') {
-          console.warn('Firebase unavailable. Attempting localStorage fallback...');
-          
-          // Fallback to localStorage
-          const users = JSON.parse(localStorage.getItem('users')) || [];
-          const user = users.find(u => u.email === email && u.password === password);
-          
-          if (user) {
-            console.log('✅ Logged in from localStorage');
-            onLogin(user);
-            setError('');
-            navigate('/home');
-            return;
-          }
-        }
-        
-        // If fallback didn't work, throw the original error
-        throw firebaseError;
+      } else {
+        setError('Invalid email or password. Please sign up if you don\'t have an account.');
       }
     } catch (err) {
       console.error('Login error:', err);
-      if (err.code === 'auth/user-not-found') {
-        setError('Email not found. Please sign up first.');
-      } else if (err.code === 'auth/wrong-password') {
-        setError('Incorrect password.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email format.');
-      } else if (err.code === 'auth/invalid-credential') {
-        setError('Invalid email or password. If you haven\'t signed up yet, please sign up first.');
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError('⚠️ Email/Password auth not enabled in Firebase. Please enable it in Firebase Console → Authentication → Sign-in method');
-      } else {
-        setError(err.message || 'Login failed. Please try again.');
-      }
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

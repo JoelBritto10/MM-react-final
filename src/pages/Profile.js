@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
-import { uploadUserImage } from '../firebaseUtils';
 
 // Utility function to compress image
 const compressImage = (base64String, maxWidth = 300, maxHeight = 300, quality = 0.7) => {
@@ -173,34 +172,7 @@ function Profile({ currentUser, onUpdateUser }) {
 
   const handleSave = async () => {
     try {
-      let profileImageURL = profileImage;
-      let backgroundImageURL = backgroundImage;
-
-      // Upload profile image to Firebase if it's a new base64 image (not a URL)
-      if (profileImage && profileImage.startsWith('data:')) {
-        try {
-          console.log('📤 Uploading profile image to Firebase...');
-          profileImageURL = await uploadUserImage(currentUser.id, profileImage, 'profile');
-          console.log('✅ Profile image uploaded to Firebase');
-        } catch (uploadError) {
-          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
-          profileImageURL = profileImage;
-        }
-      }
-
-      // Upload background image to Firebase if it's a new base64 image (not a URL)
-      if (backgroundImage && backgroundImage.startsWith('data:')) {
-        try {
-          console.log('📤 Uploading background image to Firebase...');
-          backgroundImageURL = await uploadUserImage(currentUser.id, backgroundImage, 'background');
-          console.log('✅ Background image uploaded to Firebase');
-        } catch (uploadError) {
-          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
-          backgroundImageURL = backgroundImage;
-        }
-      }
-
-      // Update local storage with new image URLs
+      // Update local storage with new image URLs and profile data
       const users = JSON.parse(localStorage.getItem('users')) || [];
       const updatedUser = { 
         ...currentUser, 
@@ -208,8 +180,8 @@ function Profile({ currentUser, onUpdateUser }) {
         username, 
         contact, 
         gender, 
-        profileImage: profileImageURL || null,
-        backgroundImage: backgroundImageURL || null
+        profileImage: profileImage || null,
+        backgroundImage: backgroundImage || null
       };
       const updatedUsers = users.map(u => 
         u.id === currentUser.id ? updatedUser : u
@@ -223,10 +195,10 @@ function Profile({ currentUser, onUpdateUser }) {
       }
       
       // Update local state with the saved images to immediately reflect changes
-      setProfileImage(profileImageURL || null);
-      setImagePreview(profileImageURL || null);
-      setBackgroundImage(backgroundImageURL || null);
-      setBackgroundPreview(backgroundImageURL || null);
+      setProfileImage(profileImage || null);
+      setImagePreview(profileImage || null);
+      setBackgroundImage(backgroundImage || null);
+      setBackgroundPreview(backgroundImage || null);
       
       setSaved(true);
       setTimeout(() => {
