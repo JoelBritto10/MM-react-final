@@ -18,7 +18,9 @@ function Login({ onLogin }) {
     try {
       // Try Firebase first
       try {
+        console.log('Attempting to login with Firebase...');
         const firebaseUser = await loginUser(email, password);
+        console.log('✅ Logged in to Firebase:', firebaseUser.uid);
 
         // Get user profile from Firestore
         const userProfile = await getUserProfile(firebaseUser.uid);
@@ -26,33 +28,37 @@ function Login({ onLogin }) {
         const userData = {
           id: firebaseUser.uid,
           email: firebaseUser.email,
+          username: userProfile?.username || 'User',
           ...userProfile
         };
 
         // Login successful
         onLogin(userData);
+        setError('');
         navigate('/home');
       } catch (firebaseError) {
-        // If Firebase Auth is not enabled, use localStorage fallback
-        if (firebaseError.code === 'auth/operation-not-allowed') {
-          console.warn('Firebase Email/Password not enabled. Using localStorage fallback.');
+        console.error('Firebase login error:', firebaseError.code, firebaseError.message);
+        
+        // Try localStorage fallback for specific errors
+        if (firebaseError.code === 'auth/operation-not-allowed' || 
+            firebaseError.code === 'auth/network-request-failed') {
+          console.warn('Firebase unavailable. Attempting localStorage fallback...');
           
           // Fallback to localStorage
           const users = JSON.parse(localStorage.getItem('users')) || [];
           const user = users.find(u => u.email === email && u.password === password);
           
-          if (!user) {
-            setError('Invalid email or password');
-            setLoading(false);
+          if (user) {
+            console.log('✅ Logged in from localStorage');
+            onLogin(user);
+            setError('');
+            navigate('/home');
             return;
           }
-          
-          // Login successful
-          onLogin(user);
-          navigate('/home');
-        } else {
-          throw firebaseError;
         }
+        
+        // If fallback didn't work, throw the original error
+        throw firebaseError;
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -63,19 +69,9 @@ function Login({ onLogin }) {
       } else if (err.code === 'auth/invalid-email') {
         setError('Invalid email format.');
       } else if (err.code === 'auth/invalid-credential') {
-        // Try localStorage fallback as last resort
-        console.warn('Firebase credentials invalid. Attempting localStorage fallback...');
-        const users = JSON.parse(localStorage.getItem('users')) || [];
-        const user = users.find(u => u.email === email && u.password === password);
-        
-        if (user) {
-          onLogin(user);
-          navigate('/home');
-          return;
-        }
-        setError('Invalid email or password. Please check your credentials.');
+        setError('Invalid email or password. If you haven\'t signed up yet, please sign up first.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError('⚠️ Email/Password auth not enabled in Firebase. Please check Firebase Console → Authentication → Sign-in method → Enable Email/Password');
+        setError('⚠️ Email/Password auth not enabled in Firebase. Please enable it in Firebase Console → Authentication → Sign-in method');
       } else {
         setError(err.message || 'Login failed. Please try again.');
       }

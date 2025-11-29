@@ -41,8 +41,14 @@ function Signup({ onLogin }) {
 
     try {
       // Try Firebase first
+      let firebaseUser = null;
+      let createdInFirebase = false;
+
       try {
-        const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
+        console.log('Attempting to create user in Firebase...');
+        firebaseUser = await registerUser(formData.email, formData.password, formData.username);
+        createdInFirebase = true;
+        console.log('✅ User created in Firebase:', firebaseUser.uid);
 
         // Get user profile from Firestore
         const userProfile = await getUserProfile(firebaseUser.uid);
@@ -50,16 +56,21 @@ function Signup({ onLogin }) {
         const userData = {
           id: firebaseUser.uid,
           email: firebaseUser.email,
+          username: formData.username,
           ...userProfile
         };
 
         // Login and redirect
         onLogin(userData);
+        setError('');
         navigate('/home');
       } catch (firebaseError) {
-        // If Firebase Auth is not enabled, use localStorage fallback
-        if (firebaseError.code === 'auth/operation-not-allowed') {
-          console.warn('Firebase Email/Password not enabled. Using localStorage fallback.');
+        console.error('Firebase signup error:', firebaseError.code, firebaseError.message);
+        
+        // Only fallback to localStorage for specific errors
+        if (firebaseError.code === 'auth/operation-not-allowed' || 
+            firebaseError.code === 'auth/network-request-failed') {
+          console.warn('Firebase unavailable. Using localStorage fallback.');
           
           // Fallback to localStorage
           const users = JSON.parse(localStorage.getItem('users')) || [];
@@ -78,24 +89,28 @@ function Signup({ onLogin }) {
             email: formData.email,
             password: formData.password,
             karma: 0,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            firebaseSync: false // Mark as not synced to Firebase
           };
           
           // Save user
           users.push(newUser);
           localStorage.setItem('users', JSON.stringify(users));
+          console.log('ℹ️ User saved to localStorage (Firebase unavailable)');
           
           // Login and redirect
           onLogin(newUser);
+          setError('');
           navigate('/home');
         } else {
+          // For other errors, throw them so they get caught below
           throw firebaseError;
         }
       }
     } catch (err) {
       console.error('Signup error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('Email already registered');
+        setError('✅ Email already registered in Firebase');
       } else if (err.code === 'auth/invalid-email') {
         setError('Invalid email format');
       } else if (err.code === 'auth/weak-password') {
@@ -103,7 +118,7 @@ function Signup({ onLogin }) {
       } else if (err.code === 'auth/invalid-credential') {
         setError('Invalid Firebase credentials. Check your .env.local file and restart the app.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError('⚠️ Email/Password auth not enabled in Firebase. Please check Firebase Console → Authentication → Sign-in method → Enable Email/Password');
+        setError('⚠️ Email/Password auth not enabled in Firebase. Please enable it in Firebase Console → Authentication → Sign-in method');
       } else {
         setError(err.message || 'Signup failed. Please try again.');
       }
