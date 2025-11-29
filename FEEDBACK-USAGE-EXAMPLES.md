@@ -2,6 +2,7 @@
 
 ## Quick Start
 
+
 ### Accessing the Feedback Page
 1. Log in to MapMates
 2. Click **📋 Feedback** in the navigation bar

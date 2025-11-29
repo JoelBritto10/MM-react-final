@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { onAuthChange, logoutUser, getUserProfile } from './firebaseUtils';
 import './App.css';
 import Navbar from './components/Navbar';
-import TripGroupChat from './components/TripGroupChat';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Home from './pages/Home';
@@ -22,27 +22,33 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem('currentUser');
-    if (user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        // Also refresh user from users array to get latest data
-        const users = JSON.parse(localStorage.getItem('users')) || [];
-        const freshUser = users.find(u => u.id === parsedUser.id);
-        if (freshUser) {
-          setCurrentUser(freshUser);
+    // Listen for Firebase auth state changes
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Get user profile from Firestore
+          const userProfile = await getUserProfile(firebaseUser.uid);
+          const userData = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            ...userProfile
+          };
+          setCurrentUser(userData);
           setIsAuthenticated(true);
-        } else {
-          setCurrentUser(parsedUser);
-          setIsAuthenticated(true);
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+        } catch (error) {
+          console.error('Error loading user profile:', error);
         }
-      } catch (error) {
-        console.error('Error parsing user:', error);
+      } else {
+        setCurrentUser(null);
         setIsAuthenticated(false);
+        localStorage.removeItem('currentUser');
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = (user) => {
@@ -51,10 +57,15 @@ function App() {
     localStorage.setItem('currentUser', JSON.stringify(user));
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('currentUser');
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('currentUser');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   return (

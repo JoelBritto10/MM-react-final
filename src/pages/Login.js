@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { loginUser, getUserProfile } from '../firebaseUtils';
 import './Auth.css';
 
 function Login({ onLogin }) {
@@ -7,24 +8,43 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Get users from localStorage
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    
-    // Check if user exists
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (!user) {
-      setError('Invalid email or password');
-      return;
-    }
+    setLoading(true);
+    setError('');
 
-    // Login successful
-    onLogin(user);
-    navigate('/home');
+    try {
+      // Login with Firebase
+      const firebaseUser = await loginUser(email, password);
+
+      // Get user profile from Firestore
+      const userProfile = await getUserProfile(firebaseUser.uid);
+
+      const userData = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        ...userProfile
+      };
+
+      // Login successful
+      onLogin(userData);
+      navigate('/home');
+    } catch (err) {
+      console.error('Login error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('Email not found. Please sign up first.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Incorrect password.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +72,9 @@ function Login({ onLogin }) {
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary">Login</button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
         <p className="auth-link">
           Don't have an account? <Link to="/signup">Sign up</Link>

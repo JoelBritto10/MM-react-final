@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { registerUser, getUserProfile } from '../firebaseUtils';
 import './Auth.css';
 
 function Signup({ onLogin }) {
@@ -11,6 +12,7 @@ function Signup({ onLogin }) {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,42 +22,53 @@ function Signup({ onLogin }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setLoading(false);
       return;
     }
 
-    // Get existing users
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-
-    // Check if email already exists
-    if (users.find(u => u.email === formData.email)) {
-      setError('Email already registered');
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
       return;
     }
 
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      profilePhoto: null,
-      bio: '',
-      karma: 0,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      // Register with Firebase
+      const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
 
-    // Save user
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
+      // Get user profile from Firestore
+      const userProfile = await getUserProfile(firebaseUser.uid);
 
-    // Login and redirect
-    onLogin(newUser);
-    navigate('/home');
+      const userData = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        ...userProfile
+      };
+
+      // Login and redirect
+      onLogin(userData);
+      navigate('/home');
+    } catch (err) {
+      console.error('Signup error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email already registered');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Use at least 6 characters.');
+      } else {
+        setError(err.message || 'Signup failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -105,7 +118,9 @@ function Signup({ onLogin }) {
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary">Sign Up</button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Creating account...' : 'Sign Up'}
+          </button>
         </form>
         <p className="auth-link">
           Already have an account? <Link to="/login">Login</Link>
