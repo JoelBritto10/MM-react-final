@@ -46,8 +46,9 @@ function EditTrip({ currentUser }) {
         tripImageURL = await uploadTripImage(id, formData.image, currentUser.id);
         console.log('✅ Trip image uploaded to Firebase');
       } catch (uploadError) {
-        console.error('Error uploading trip image:', uploadError);
-        alert('Error uploading trip image. Continuing with existing image.');
+        console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
+        // If Firebase fails, keep the base64 image
+        tripImageURL = formData.image;
       }
     }
 

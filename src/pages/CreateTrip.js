@@ -162,9 +162,9 @@ function CreateTrip({ currentUser }) {
           tripImageURL = await uploadTripImage(tripId, formData.image, currentUser.id);
           console.log('✅ Trip image uploaded to Firebase');
         } catch (uploadError) {
-          console.error('Error uploading trip image:', uploadError);
-          alert('Error uploading trip image. Creating trip without image.');
-          // Continue without image
+          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
+          // If Firebase fails, keep the base64 image in localStorage
+          tripImageURL = formData.image;
         }
       }
 
@@ -179,7 +179,7 @@ function CreateTrip({ currentUser }) {
         hostId: currentUser.id,
         hostName: currentUser.username,
         participants: [],
-        image: tripImageURL || null, // Use Firebase URL if available
+        image: tripImageURL || null, // Use Firebase URL if available, otherwise base64
         category: formData.category,
         createdAt: new Date().toISOString()
       };
@@ -188,7 +188,7 @@ function CreateTrip({ currentUser }) {
         const trips = JSON.parse(localStorage.getItem('trips')) || [];
         trips.push(newTrip);
         localStorage.setItem('trips', JSON.stringify(trips));
-        alert('✅ Trip created successfully! Image stored in Firebase.');
+        alert('✅ Trip created successfully!');
         navigate('/home');
       } catch (error) {
         if (error.name === 'QuotaExceededError') {

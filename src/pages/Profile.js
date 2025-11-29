@@ -184,10 +184,9 @@ function Profile({ currentUser }) {
           profileImageURL = await uploadUserImage(currentUser.id, profileImage, 'profile');
           console.log('✅ Profile image uploaded to Firebase');
         } catch (uploadError) {
-          console.error('Error uploading profile image:', uploadError);
-          alert('Error uploading profile image. Please try again.');
-          setSaved(false);
-          return;
+          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
+          // If Firebase fails, keep the base64 image in localStorage
+          profileImageURL = profileImage;
         }
       }
 
@@ -198,10 +197,9 @@ function Profile({ currentUser }) {
           backgroundImageURL = await uploadUserImage(currentUser.id, backgroundImage, 'background');
           console.log('✅ Background image uploaded to Firebase');
         } catch (uploadError) {
-          console.error('Error uploading background image:', uploadError);
-          alert('Error uploading background image. Please try again.');
-          setSaved(false);
-          return;
+          console.warn('⚠️ Firebase upload failed, saving to localStorage instead:', uploadError.message);
+          // If Firebase fails, keep the base64 image in localStorage
+          backgroundImageURL = backgroundImage;
         }
       }
 
@@ -222,6 +220,7 @@ function Profile({ currentUser }) {
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       
+      alert('✅ Profile saved successfully!');
       setIsEditing(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
@@ -231,6 +230,9 @@ function Profile({ currentUser }) {
         alert('Error saving profile. Please try again.');
       }
       console.error('Save error:', error);
+      setSaved(false);
+    }
+  };
     }
   };
 

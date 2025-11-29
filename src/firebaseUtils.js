@@ -345,13 +345,18 @@ export const uploadUserImage = async (uid, base64Image, imageType = 'profile') =
     const downloadURL = await getDownloadURL(imageRef);
     console.log(`✅ Image uploaded successfully: ${downloadURL}`);
 
-    // Save the image URL to Firestore user profile
-    const updateData = {};
-    updateData[`${imageType}Image`] = downloadURL;
-    updateData[`${imageType}ImagePath`] = fileName; // Store path for deletion purposes
-
-    await updateUserProfile(uid, updateData);
-    console.log(`✅ Image URL saved to Firestore`);
+    // Try to save the image URL to Firestore user profile
+    // If user is using localStorage fallback, this will be skipped
+    try {
+      const updateData = {};
+      updateData[`${imageType}Image`] = downloadURL;
+      updateData[`${imageType}ImagePath`] = fileName;
+      await updateUserProfile(uid, updateData);
+      console.log(`✅ Image URL saved to Firestore`);
+    } catch (firestoreError) {
+      // If Firestore update fails (e.g., no profile exists), continue anyway
+      console.warn(`⚠️ Could not save to Firestore, but image uploaded successfully to Storage:`, firestoreError.message);
+    }
 
     return downloadURL;
   } catch (error) {
