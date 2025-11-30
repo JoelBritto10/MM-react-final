@@ -16,14 +16,20 @@ function EditTrip({ currentUser }) {
     maxCount: '',
     tripType: 'group'
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
+    // Load trip from localStorage using correct key
+    const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
     const trip = trips.find(t => t.id === id);
     if (trip) {
       setFormData(trip);
+    } else {
+      alert('Trip not found');
+      navigate('/home');
     }
-  }, [id]);
+    setLoading(false);
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -36,25 +42,44 @@ function EditTrip({ currentUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let tripImageURL = formData.image;
-
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
-    const updatedTrips = trips.map(t =>
-      t.id === id ? { ...t, ...formData, image: tripImageURL } : t
-    );
-    localStorage.setItem('trips', JSON.stringify(updatedTrips));
-    alert('✅ Trip updated successfully!');
-    navigate('/home');
-  };
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this trip?')) {
-      const trips = JSON.parse(localStorage.getItem('trips')) || [];
-      const filteredTrips = trips.filter(t => t.id !== id);
-      localStorage.setItem('trips', JSON.stringify(filteredTrips));
-      navigate('/home');
+    try {
+      // Update trip in localStorage
+      const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+      const tripIndex = trips.findIndex(t => t.id === id);
+      
+      if (tripIndex !== -1) {
+        trips[tripIndex] = { ...formData, id };
+        localStorage.setItem('mapmates_trips', JSON.stringify(trips));
+        alert('✅ Trip updated successfully!');
+        navigate('/home');
+      } else {
+        alert('Trip not found');
+      }
+    } catch (error) {
+      console.error('Update trip error:', error);
+      alert('Error updating trip. Please try again.');
     }
   };
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this trip?')) {
+      try {
+        // Delete trip from localStorage
+        const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+        const filteredTrips = trips.filter(t => t.id !== id);
+        localStorage.setItem('mapmates_trips', JSON.stringify(filteredTrips));
+        alert('✅ Trip deleted successfully!');
+        navigate('/home');
+      } catch (error) {
+        console.error('Delete trip error:', error);
+        alert('Error deleting trip. Please try again.');
+      }
+    }
+  };
+
+  if (loading) {
+    return <div className="container"><p>Loading...</p></div>;
+  }
 
   return (
     <div className="container">

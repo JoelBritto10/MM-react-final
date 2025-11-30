@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { uploadUserImage, updateUserProfile } from '../firebaseUtils';
 import './Profile.css';
 
 // Utility function to compress image
@@ -63,7 +64,7 @@ function Profile({ currentUser, onUpdateUser }) {
   const [hostedTrips, setHostedTrips] = useState([]);
 
   useEffect(() => {
-    // Refresh user data from localStorage to get latest updates
+    // Refresh user data from localStorage only when entering/exiting edit mode
     if (currentUser?.id) {
       const users = JSON.parse(localStorage.getItem('users')) || [];
       const updatedUser = users.find(u => u.id === currentUser.id);
@@ -78,7 +79,8 @@ function Profile({ currentUser, onUpdateUser }) {
         setGender(updatedUser.gender || '');
       }
     }
-  }, [currentUser?.id, isEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
 
   useEffect(() => {
     // Load trips from localStorage
@@ -106,8 +108,6 @@ function Profile({ currentUser, onUpdateUser }) {
     const file = e.target.files[0];
     if (!file) return;
     
-    console.log('Profile image upload started:', file.name, file.size);
-    
     // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       alert('Image is too large. Please choose an image under 2MB.');
@@ -117,13 +117,10 @@ function Profile({ currentUser, onUpdateUser }) {
     const reader = new FileReader();
     reader.onloadend = async () => {
       try {
-        console.log('File read successfully, compressing...');
         // Compress the image
         const compressedImage = await compressImage(reader.result, 300, 300, 0.7);
-        console.log('Image compressed successfully');
         setProfileImage(compressedImage);
         setImagePreview(compressedImage);
-        alert('Profile photo uploaded successfully!');
       } catch (error) {
         console.error('Error compressing image:', error);
         alert('Error processing image. Please try another image.');
@@ -140,8 +137,6 @@ function Profile({ currentUser, onUpdateUser }) {
     const file = e.target.files[0];
     if (!file) return;
     
-    console.log('Background image upload started:', file.name, file.size);
-    
     // Check file size (max 3MB for background)
     if (file.size > 3 * 1024 * 1024) {
       alert('Image is too large. Please choose an image under 3MB.');
@@ -151,13 +146,10 @@ function Profile({ currentUser, onUpdateUser }) {
     const reader = new FileReader();
     reader.onloadend = async () => {
       try {
-        console.log('File read successfully, compressing...');
         // Compress the background image (wider dimensions)
         const compressedImage = await compressImage(reader.result, 800, 300, 0.65);
-        console.log('Background image compressed successfully');
         setBackgroundImage(compressedImage);
         setBackgroundPreview(compressedImage);
-        alert('Background photo uploaded successfully!');
       } catch (error) {
         console.error('Error compressing image:', error);
         alert('Error processing image. Please try another image.');
@@ -172,33 +164,50 @@ function Profile({ currentUser, onUpdateUser }) {
 
   const handleSave = async () => {
     try {
-      // Update local storage with new image URLs and profile data
-      const users = JSON.parse(localStorage.getItem('users')) || [];
+      let profileImageURL = profileImage;
+      let backgroundImageURL = backgroundImage;
+
+      // Store images as base64 in localStorage (Firebase Storage disabled for local development)
+      // Firebase uploads require proper domain authorization - using localStorage for now
+      if (profileImage && profileImage.startsWith('data:')) {
+        profileImageURL = profileImage;
+      }
+
+      // Store background image as base64 in localStorage
+      if (backgroundImage && backgroundImage.startsWith('data:')) {
+        backgroundImageURL = backgroundImage;
+      }
+
+      // Update profile in localStorage (primary storage)
+      // Note: Firebase Firestore update is optional for development
+
+      // Update local storage (primary storage)
       const updatedUser = { 
         ...currentUser, 
-        bio, 
-        username, 
-        contact, 
-        gender, 
-        profileImage: profileImage || null,
-        backgroundImage: backgroundImage || null
+        bio,
+        username,
+        contact,
+        gender,
+        profileImage: profileImageURL || null,
+        backgroundImage: backgroundImageURL || null
       };
-      const updatedUsers = users.map(u => 
-        u.id === currentUser.id ? updatedUser : u
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      
+      // Update users list in localStorage
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      const userIndex = users.findIndex(u => u.id === currentUser.id);
+      if (userIndex !== -1) {
+        users[userIndex] = updatedUser;
+      } else {
+        users.push(updatedUser);
+      }
+      localStorage.setItem('users', JSON.stringify(users));
       
       // Update parent component's currentUser state
       if (onUpdateUser) {
         onUpdateUser(updatedUser);
       }
-      
-      // Update local state with the saved images to immediately reflect changes
-      setProfileImage(profileImage || null);
-      setImagePreview(profileImage || null);
-      setBackgroundImage(backgroundImage || null);
-      setBackgroundPreview(backgroundImage || null);
       
       setSaved(true);
       setTimeout(() => {
@@ -211,9 +220,9 @@ function Profile({ currentUser, onUpdateUser }) {
       if (error.name === 'QuotaExceededError') {
         alert('Storage quota exceeded. Please use smaller images.');
       } else {
+        console.error('Save error:', error);
         alert('Error saving profile. Please try again.');
       }
-      console.error('Save error:', error);
       setSaved(false);
     }
   };

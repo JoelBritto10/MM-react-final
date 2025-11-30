@@ -55,6 +55,7 @@ function CreateTrip({ currentUser }) {
   const [userLocation, setUserLocation] = useState({ lat: 37.7749, lng: -122.4194 });
   const [urlInput, setUrlInput] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -142,53 +143,91 @@ function CreateTrip({ currentUser }) {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!formData.mapsUrl) {
-      alert('Please select a location on the map');
+    // Validate required fields
+    if (!formData.title.trim()) {
+      alert('Please enter a trip title');
       return;
     }
 
-    let tripImageURL = null;
+    if (!formData.description.trim()) {
+      alert('Please enter a trip description');
+      return;
+    }
+
+    if (!formData.location.trim()) {
+      alert('Please enter a location');
+      return;
+    }
+
+    if (!formData.date) {
+      alert('Please select a date');
+      return;
+    }
+
+    if (!formData.time) {
+      alert('Please select a time');
+      return;
+    }
+
+    if (!formData.mapsUrl) {
+      alert('Please add a location using the Google Maps URL');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      // Use the image as-is (base64)
-      tripImageURL = formData.image;
-
+      // Get existing trips from localStorage
+      const existingTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+      
       const newTrip = {
         id: Date.now().toString(),
-        title: formData.title,
-        description: formData.description,
-        location: formData.location,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        location: formData.location.trim(),
         date: formData.date,
         time: formData.time,
         mapsUrl: formData.mapsUrl,
-        hostId: currentUser.id,
-        hostName: currentUser.username,
-        participants: [],
-        image: tripImageURL || null,
+        hostId: currentUser?.uid || 'demo-user',
+        hostName: currentUser?.displayName || 'User',
+        participants: [currentUser?.uid || 'demo-user'],
+        image: formData.image || null,
         category: formData.category,
+        maxCount: formData.maxCount ? parseInt(formData.maxCount) : null,
+        tripType: formData.tripType,
         createdAt: new Date().toISOString()
       };
 
-      try {
-        const trips = JSON.parse(localStorage.getItem('trips')) || [];
-        trips.push(newTrip);
-        localStorage.setItem('trips', JSON.stringify(trips));
-        alert('✅ Trip created successfully!');
-        navigate('/home');
-      } catch (error) {
-        if (error.name === 'QuotaExceededError') {
-          alert('Storage quota exceeded. Please use a smaller image or remove the image.');
-        } else {
-          alert('Error creating trip. Please try again.');
-        }
-        console.error('Create trip error:', error);
-      }
+      // Add to existing trips
+      existingTrips.push(newTrip);
+      localStorage.setItem('mapmates_trips', JSON.stringify(existingTrips));
+
+      alert('✅ Trip created successfully!');
+      
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        location: '',
+        date: '',
+        time: '',
+        mapsUrl: '',
+        image: null,
+        category: 'all',
+        maxCount: '',
+        tripType: 'group'
+      });
+      setImagePreview(null);
+      
+      navigate('/home');
     } catch (error) {
-      alert('Error processing trip. Please try again.');
-      console.error('Submit error:', error);
+      console.error('Error creating trip:', error);
+      alert('Error creating trip: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -381,8 +420,13 @@ function CreateTrip({ currentUser }) {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }}>
-            ✅ Create Trip
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            style={{ width: '100%', marginTop: '20px' }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '⏳ Creating Trip...' : '✅ Create Trip'}
           </button>
         </form>
       </div>

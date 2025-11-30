@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { registerUser } from '../firebaseUtils';
 import './Auth.css';
 
 function Signup({ onLogin }) {
@@ -39,38 +40,31 @@ function Signup({ onLogin }) {
     }
 
     try {
-      // Get existing users from localStorage
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      
-      // Check if email already exists
-      if (users.find(u => u.email === formData.email)) {
-        setError('Email already registered');
-        setLoading(false);
-        return;
-      }
-      
-      // Create new user
-      const newUser = {
-        id: Date.now().toString(),
+      // Register with Firebase
+      const firebaseUser = await registerUser(formData.email, formData.password, formData.username);
+
+      const userData = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
         username: formData.username,
-        email: formData.email,
-        password: formData.password,
         karma: 0,
         createdAt: new Date().toISOString()
       };
-      
-      // Save user
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-      console.log('✅ Account created successfully');
-      
+
       // Login and redirect
-      onLogin(newUser);
-      setError('');
+      onLogin(userData);
       navigate('/home');
     } catch (err) {
       console.error('Signup error:', err);
-      setError(err.message || 'Signup failed. Please try again.');
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email already registered.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak.');
+      } else {
+        setError(err.message || 'Signup failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

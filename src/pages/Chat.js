@@ -54,7 +54,6 @@ function Chat({ currentUser }) {
 
   useEffect(() => {
     loadMessages();
-    // Load read status from localStorage
     const savedReadStatus = JSON.parse(localStorage.getItem('messageReadStatus') || '{}');
     setReadStatus(savedReadStatus);
   }, [currentUser]);
@@ -73,11 +72,11 @@ function Chat({ currentUser }) {
       return;
     }
 
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
+    const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
     
     const myTrips = trips.filter(trip => {
-      const isParticipant = trip.participants && trip.participants.includes(currentUser.id);
-      const isHost = trip.hostId === currentUser.id;
+      const isParticipant = trip.participants && trip.participants.includes(currentUser.id || currentUser.uid);
+      const isHost = trip.hostId === (currentUser.id || currentUser.uid);
       return isParticipant || isHost;
     });
     
@@ -108,8 +107,8 @@ function Chat({ currentUser }) {
 
     const newMsg = {
       id: Date.now().toString(),
-      userId: currentUser.id,
-      username: currentUser.username,
+      userId: currentUser.id || currentUser.uid,
+      username: currentUser.displayName || currentUser.username || 'User',
       message: newMessage.trim(),
       timestamp: new Date().toISOString(),
       tripId: selectedTripId,
@@ -146,7 +145,7 @@ function Chat({ currentUser }) {
         (position) => {
           const { latitude, longitude } = position.coords;
           const locationMessage = `📍 Shared Location: https://maps.google.com/?q=${latitude},${longitude}`;
-          setNewMessage(prev => prev + (prev ? ' ' : '') + locationMessage);
+          setNewMessage(prev => prev + (prev ? '\n' : '') + locationMessage);
           setShowAttachmentMenu(false);
         },
         (error) => {
@@ -182,23 +181,13 @@ function Chat({ currentUser }) {
   };
 
   const markMessagesAsRead = (tripId) => {
-    // Mark all messages in this trip as read for current user
-    const readStatusData = JSON.parse(localStorage.getItem('messageReadStatus') || '{}');
-    if (!readStatusData[tripId]) {
-      readStatusData[tripId] = {};
-    }
-    readStatusData[tripId][currentUser.id] = new Date().toISOString();
-    localStorage.setItem('messageReadStatus', JSON.stringify(readStatusData));
-    setReadStatus(readStatusData);
+    const newReadStatus = { ...readStatus, [tripId]: new Date().toISOString() };
+    setReadStatus(newReadStatus);
+    localStorage.setItem('messageReadStatus', JSON.stringify(newReadStatus));
   };
 
   const hasUnreadMessages = (tripId) => {
-    // Check if there are unread messages for the current user
-    const readStatusData = readStatus[tripId];
-    if (!readStatusData || !readStatusData[currentUser.id]) {
-      return true; // No read status = unread
-    }
-    const lastReadTime = new Date(readStatusData[currentUser.id]);
+    const lastReadTime = readStatus[tripId] ? new Date(readStatus[tripId]) : new Date(0);
     const messages = messagesByTrip[tripId]?.messages || [];
     return messages.some(msg => new Date(msg.timestamp) > lastReadTime);
   };
@@ -240,9 +229,9 @@ function Chat({ currentUser }) {
               selectedTrip.messages.map(msg => (
                 <div 
                   key={msg.id} 
-                  className={`message-full ${msg.username === currentUser.username ? 'sent' : 'received'}`}
+                  className={`message-full ${msg.username === (currentUser.displayName || currentUser.username) ? 'sent' : 'received'}`}
                 >
-                  {msg.username !== currentUser.username && (
+                  {msg.username !== (currentUser.displayName || currentUser.username) && (
                     <span className="sender-name-full">{msg.username}</span>
                   )}
                   <div className="message-bubble-full">
@@ -378,7 +367,7 @@ function Chat({ currentUser }) {
                     
                     <p className="conv-preview">
                       {lastMessage 
-                        ? `${lastMessage.username === currentUser.username ? 'You: ' : ''}${lastMessage.message.substring(0, 60)}${lastMessage.message.length > 60 ? '...' : ''}`
+                        ? `${lastMessage.username === (currentUser.displayName || currentUser.username) ? 'You: ' : ''}${lastMessage.message.substring(0, 60)}${lastMessage.message.length > 60 ? '...' : ''}`
                         : 'No messages yet'
                       }
                     </p>

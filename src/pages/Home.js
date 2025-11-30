@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Home.css';
-import TripSuggestions from '../components/TripSuggestions';
 
 function Home({ currentUser }) {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
-  const [expandedChatTrip, setExpandedChatTrip] = useState(null);
-  const [tripMessages, setTripMessages] = useState({});
-  const [newMessages, setNewMessages] = useState({});
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -17,6 +13,20 @@ function Home({ currentUser }) {
     }
   }, [currentUser, navigate]);
 
+  // Load trips from localStorage
+  useEffect(() => {
+    const loadTrips = () => {
+      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+      setTrips(storedTrips);
+    };
+
+    loadTrips();
+
+    // Set up listener for storage changes
+    window.addEventListener('storage', loadTrips);
+    return () => window.removeEventListener('storage', loadTrips);
+  }, []);
+
   // Handle joining a trip
   const handleJoinTrip = (trip) => {
     if (!currentUser) {
@@ -24,8 +34,10 @@ function Home({ currentUser }) {
       return;
     }
 
+    const userId = currentUser?.uid || 'demo-user';
+
     // Check if user already joined
-    if (trip.participants && trip.participants.includes(currentUser.id)) {
+    if (trip.participants && trip.participants.includes(userId)) {
       alert('You have already joined this trip');
       return;
     }
@@ -36,247 +48,143 @@ function Home({ currentUser }) {
       return;
     }
 
-    // Add user to participants
-    const updatedTrips = trips.map(t => {
-      if (t.id === trip.id) {
-        return {
-          ...t,
-          participants: [...(t.participants || []), currentUser.id]
-        };
+    try {
+      // Update trip participants in localStorage
+      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+      const tripIndex = storedTrips.findIndex(t => t.id === trip.id);
+      
+      if (tripIndex !== -1) {
+        storedTrips[tripIndex].participants = [...(storedTrips[tripIndex].participants || []), userId];
+        localStorage.setItem('mapmates_trips', JSON.stringify(storedTrips));
+        setTrips(storedTrips);
+        alert('Successfully joined the trip!');
       }
-      return t;
-    });
-
-    setTrips(updatedTrips);
-    localStorage.setItem('trips', JSON.stringify(updatedTrips));
-    alert('Successfully joined the trip!');
-  };
-
-  const handleEndTrip = (trip) => {
-    const confirmEnd = window.confirm('Are you sure you want to end this trip? Members will be able to rate it.');
-    if (!confirmEnd) return;
-
-    // Mark trip as ended
-    const updatedTrips = trips.map(t => {
-      if (t.id === trip.id) {
-        return {
-          ...t,
-          ended: true,
-          endedAt: new Date().toISOString()
-        };
-      }
-      return t;
-    });
-
-    setTrips(updatedTrips);
-    localStorage.setItem('trips', JSON.stringify(updatedTrips));
-    alert('Trip ended! Members can now rate their experience.');
-  };
-
-  const handleSendMessageFromCard = (tripId, message) => {
-    if (!message.trim()) return;
-
-    const newMsg = {
-      id: Date.now().toString(),
-      userId: currentUser.id,
-      username: currentUser.username,
-      message: message.trim(),
-      timestamp: new Date().toISOString(),
-      tripId: tripId
-    };
-
-    const messages = JSON.parse(localStorage.getItem('tripMessages')) || {};
-    if (!messages[tripId]) {
-      messages[tripId] = [];
+    } catch (error) {
+      console.error('Error joining trip:', error);
+      alert('Failed to join trip. Please try again.');
     }
-    messages[tripId].push(newMsg);
-    localStorage.setItem('tripMessages', JSON.stringify(messages));
-
-    setTripMessages(messages);
-    setNewMessages(prev => ({
-      ...prev,
-      [tripId]: ''
-    }));
   };
-
-  const getTripLastMessage = (tripId) => {
-    const messages = tripMessages[tripId] || [];
-    if (messages.length === 0) return 'No messages yet';
-    const lastMsg = messages[messages.length - 1];
-    return lastMsg.message.substring(0, 50) + (lastMsg.message.length > 50 ? '...' : '');
-  };
-
-  useEffect(() => {
-    // Load trips from localStorage
-    const storedTrips = JSON.parse(localStorage.getItem('trips')) || [];
-    setTrips(storedTrips);
-    
-    // Load all messages
-    const messages = JSON.parse(localStorage.getItem('tripMessages')) || {};
-    setTripMessages(messages);
-  }, []);
 
   return (
     <div className="container">
-      <div className="home-header">
-        <h1>🗺️ Trip Locations & Experiences</h1>
-        <Link to="/create-trip" className="btn btn-primary">➕ Create Trip</Link>
+      <div className="page-header">
+        <h1>Discover trips</h1>
+        <Link to="/create-trip" className="btn-primary">+ Create trip</Link>
       </div>
 
-      <div className="trips-grid">
-        {trips.map(trip => (
-          <div key={trip.id} className="trip-card card">
-            {trip.image && (
-              <div className="trip-image-container">
-                <img src={trip.image} alt={trip.title} className="trip-image" />
-              </div>
-            )}
-            <div style={{ padding: '12px' }}>
-              <h3>{trip.title}</h3>
-              <p className="trip-location">📍 {trip.location}</p>
-              <p className="trip-desc">{trip.description}</p>
-              <p className="trip-host">Hosted by <strong>{trip.hostName}</strong></p>
-              <p className="trip-date">📅 {new Date(trip.date).toLocaleDateString()} {trip.time && `@ ${trip.time}`}</p>
-              {trip.participants && trip.participants.length > 0 && (
-                <p className="trip-participants">👥 {trip.participants.length} joined</p>
-              )}
-              {trip.ended && (
-                <p className="trip-ended-badge">✅ Trip Ended</p>
-              )}
-              
-              {/* Chat Preview Section */}
-              {expandedChatTrip === trip.id ? (
-                <div className="trip-chat-preview expanded">
-                  <div className="chat-preview-header">
-                    <h4>💬 {trip.title}</h4>
-                    <button 
-                      onClick={() => setExpandedChatTrip(null)}
-                      className="close-chat-btn"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  <div className="chat-messages-mini">
-                    {(tripMessages[trip.id] || []).length === 0 ? (
-                      <p className="empty-chat">Start the conversation!</p>
-                    ) : (
-                      (tripMessages[trip.id] || []).slice(-3).map(msg => (
-                        <div 
-                          key={msg.id} 
-                          className={`mini-message ${msg.username === currentUser.username ? 'sent' : 'received'}`}
-                        >
-                          <strong>{msg.username}</strong>
-                          <p>{msg.message.substring(0, 40)}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleSendMessageFromCard(trip.id, newMessages[trip.id] || '');
-                    }}
-                    className="chat-input-mini"
-                  >
-                    <input
-                      type="text"
-                      value={newMessages[trip.id] || ''}
-                      onChange={(e) => setNewMessages(prev => ({
-                        ...prev,
-                        [trip.id]: e.target.value
-                      }))}
-                      placeholder="Type a message..."
-                      maxLength="200"
-                      className="mini-input"
-                    />
-                    <button type="submit" className="mini-send-btn">📤</button>
-                  </form>
-                </div>
-              ) : (
-                <div className="trip-chat-preview">
-                  <button 
-                    onClick={() => setExpandedChatTrip(trip.id)}
-                    className="chat-preview-btn"
-                    title="Click to chat"
-                  >
-                    <span className="chat-icon">💬</span>
-                    <span className="preview-text">{getTripLastMessage(trip.id)}</span>
-                  </button>
-                </div>
-              )}
-              
-              <div className="trip-actions">
-                {currentUser?.id === trip.hostId && (
-                  <>
-                    {!trip.ended ? (
-                      <>
-                        <Link to={`/edit-trip/${trip.id}`} className="btn btn-primary">Edit</Link>
-                        <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
-                        <button 
-                          onClick={() => handleEndTrip(trip)}
-                          className="btn btn-end"
-                        >
-                          🛑 End Trip
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
-                      </>
-                    )}
-                  </>
-                )}
-                {currentUser?.id !== trip.hostId && (
-                  <>
-                    {!trip.participants || !trip.participants.includes(currentUser?.id) ? (
-                      <>
-                        {trip.maxCount && trip.participants && trip.participants.length >= trip.maxCount ? (
-                          <button 
-                            className="btn btn-join"
-                            disabled
-                            style={{ opacity: '0.5', cursor: 'not-allowed', backgroundColor: '#ccc' }}
-                          >
-                            🚫 Trip is Full
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => handleJoinTrip(trip)}
-                            className="btn btn-join"
-                          >
-                            ➕ Join Trip
-                          </button>
-                        )}
-                        {trip.maxCount && (
-                          <span style={{ fontSize: '12px', color: '#999', marginLeft: '8px' }}>
-                            {trip.participants?.length || 0}/{trip.maxCount}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => navigate('/chat')} className="btn btn-chat">
-                          💬 Join GC
-                        </button>
-                        <Link to="/map" className="btn btn-secondary">🧭 Navigate</Link>
-                        {trip.ended && (
-                          <Link to={`/trip-review/${trip.id}`} className="btn btn-review">
-                            ⭐ Rate Trip
-                          </Link>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+      <div className="trips-container">
+        {trips.length === 0 ? (
+          <div className="empty-state">
+            <h3>No trips yet</h3>
+            <p>Be the first to create a trip!</p>
+            <Link to="/create-trip" className="btn-primary">Create trip</Link>
           </div>
-        ))}
-      </div>
+        ) : (
+          trips.map(trip => {
+            const isHost = trip.hostId === currentUser?.id;
+            const hasJoined = trip.participants && trip.participants.includes(currentUser?.id);
+            const participantCount = trip.participants?.length || 0;
+            const capacityFill = trip.maxCount ? Math.round((participantCount / trip.maxCount) * 100) : 0;
+            const tripDate = new Date(trip.date);
+            const today = new Date();
+            const daysUntilTrip = Math.ceil((tripDate - today) / (1000 * 60 * 60 * 24));
+            
+            return (
+              <div key={trip.id} className="trip-card">
+                {trip.image && (
+                  <div 
+                    className="trip-image" 
+                    style={{ backgroundImage: `url('${trip.image}')` }}
+                  >
+                    <div className="trip-image-overlay">
+                      <span className="trip-category">{trip.category || '🌍 Trip'}</span>
+                      {daysUntilTrip > 0 && (
+                        <span className="trip-countdown">{daysUntilTrip} days away</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="trip-content">
+                  <div className="trip-header">
+                    <div>
+                      <div className="trip-date">{tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      <h3 className="trip-title">{trip.title}</h3>
+                    </div>
+                    <div className="trip-badges">
+                      {isHost && (
+                        <span className="host-badge">👤 Host</span>
+                      )}
+                      {hasJoined && !isHost && (
+                        <span className="joined-badge">✓ Joined</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="trip-description">{trip.description}</p>
+                  
+                  <div className="trip-details">
+                    <div className="detail-item">
+                      <span className="detail-icon">📍</span>
+                      <span className="detail-text">{trip.location}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">👤</span>
+                      <span className="detail-text">{trip.hostName}</span>
+                    </div>
+                  </div>
 
-      {/* Trip Suggestions Widget - Only on Home Page */}
-      <TripSuggestions currentUser={currentUser} />
+                  <div className="trip-participants-info">
+                    <div className="participants-header">
+                      <span className="participants-label">Participants</span>
+                      <span className="participants-count">{participantCount}{trip.maxCount ? `/${trip.maxCount}` : ''}</span>
+                    </div>
+                    {trip.maxCount && (
+                      <div className="capacity-bar">
+                        <div 
+                          className="capacity-fill" 
+                          style={{ 
+                            width: `${capacityFill}%`,
+                            background: capacityFill > 80 ? '#ff6b6b' : capacityFill > 50 ? '#ffd93d' : '#10b981'
+                          }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="trip-actions">
+                    {isHost ? (
+                      <Link to={`/edit-trip/${trip.id}`} className="btn-secondary">✏️ Edit trip</Link>
+                    ) : hasJoined ? (
+                      <>
+                        <Link 
+                          to={`/map?tripId=${trip.id}`}
+                          className="btn-primary"
+                        >
+                          🗺️ Navigate
+                        </Link>
+                        <Link 
+                          to="/chat"
+                          className="btn-chat"
+                        >
+                          💬 Group Chat
+                        </Link>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => handleJoinTrip(trip)}
+                        className="btn-primary"
+                        disabled={trip.maxCount && participantCount >= trip.maxCount}
+                      >
+                        + Join trip
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

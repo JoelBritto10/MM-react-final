@@ -13,19 +13,41 @@
 .stat-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 30px;
-  border-radius: 12px;
+  padding: 40px 30px;
+  border-radius: 16px;
   text-align: center;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
 }
 
 .stat-card h3 {
-  font-size: 36px;
+  font-size: 48px;
   margin-bottom: 10px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .stat-card p {
   font-size: 14px;
-  margin: 5px 0;
+  margin: 6px 0;
+  position: relative;
+  z-index: 1;
+  line-height: 1.6;
 }
 
 .badge {
@@ -64,17 +86,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px;
-  margin-bottom: 10px;
-  background: #f9f9f9;
-  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: white;
+  border-radius: 12px;
   border-left: 4px solid #667eea;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .leaderboard-item:hover {
-  background: #f0f0f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03), rgba(118, 75, 162, 0.03));
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.12);
+  transform: translateX(4px);
+  border-left-width: 6px;
 }
 
 .rank {

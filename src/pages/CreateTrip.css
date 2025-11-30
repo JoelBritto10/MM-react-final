@@ -1,112 +1,148 @@
 .form-card {
   max-width: 900px;
   margin: 0 auto;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .form-card h1 {
-  margin-bottom: 25px;
+  margin-bottom: 30px;
   color: #333;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-weight: 600;
   color: #333;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-group-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 20px;
 }
 
 input,
 textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
+  transition: all 0.3s ease;
+  background: #f9f9f9;
 }
 
 input:focus,
 textarea:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  background: white;
 }
 
 .category-select {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   background: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .category-select:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .btn {
-  padding: 12px;
+  padding: 14px 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
   font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 /* Location Picker Section */
 .location-picker-section {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 25px 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  padding: 24px;
+  border-radius: 12px;
+  margin: 30px 0;
   border: 2px dashed #667eea;
+  transition: all 0.3s ease;
+}
+
+.location-picker-section:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+  border-color: #764ba2;
 }
 
 .location-picker-section h3 {
   color: #667eea;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   font-size: 18px;
+  font-weight: 600;
 }
 
 .helper-text {
   color: #666;
   font-size: 13px;
-  margin-bottom: 15px;
+  margin-bottom: 18px;
+  line-height: 1.6;
 }
 
 .picker-method {
   background: white;
-  padding: 15px;
-  border-radius: 6px;
+  padding: 18px;
+  border-radius: 8px;
   margin-bottom: 0;
   border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.picker-method:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.12);
 }
 
 .url-input-form {
@@ -184,19 +220,20 @@ textarea:focus {
 }
 
 .image-upload-label {
-  padding: 12px;
+  padding: 14px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   text-align: center;
   font-weight: 600;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 .image-upload-label:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
 }
 
 .image-preview {
