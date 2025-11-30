@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './TripSearch.css';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function TripSearch({ currentUser }) {
   const [trips, setTrips] = useState([]);
@@ -9,14 +10,24 @@ function TripSearch({ currentUser }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
+  const [availableCategories, setAvailableCategories] = useState([]);
 
-  // Load trips from localStorage
+  // Load trips from Firebase
   useEffect(() => {
     try {
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      setTrips(storedTrips);
-      setFilteredTrips(storedTrips);
-      setLoading(false);
+      const unsubscribe = subscribeToTrips((firebaseTrips) => {
+        setTrips(firebaseTrips || []);
+        setFilteredTrips(firebaseTrips || []);
+        
+        // Extract unique categories from trips
+        const uniqueCategories = [...new Set(firebaseTrips.map(trip => trip.category).filter(cat => cat && cat !== 'all'))];
+        const categories = ['all', ...uniqueCategories.sort()];
+        setAvailableCategories(categories);
+        
+        setLoading(false);
+      });
+      
+      return () => unsubscribe();
     } catch (error) {
       console.error('Error loading trips:', error);
       setLoading(false);
@@ -103,13 +114,11 @@ function TripSearch({ currentUser }) {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="filter-select"
               >
-                <option value="all">🌍 All Categories</option>
-                <option value="beach">🏖️ Beach</option>
-                <option value="mountain">⛰️ Mountain</option>
-                <option value="city">🏙️ City</option>
-                <option value="adventure">🎯 Adventure</option>
-                <option value="culture">🎭 Culture</option>
-                <option value="sports">⚽ Sports</option>
+                {availableCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category === 'all' ? '🌍 All Categories' : category}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -164,14 +173,19 @@ function TripSearch({ currentUser }) {
                   <div className="trip-header">
                     <h3>{trip.title}</h3>
                     {trip.category && (
-                      <span className="category-badge">
+                      <button
+                        onClick={() => setSelectedCategory(trip.category)}
+                        className="category-badge"
+                        title={`Filter by ${trip.category}`}
+                        style={{ cursor: 'pointer', border: 'none', background: 'none', padding: '0' }}
+                      >
                         {trip.category === 'beach' && '🏖️'}
                         {trip.category === 'mountain' && '⛰️'}
                         {trip.category === 'city' && '🏙️'}
                         {trip.category === 'adventure' && '🎯'}
                         {trip.category === 'culture' && '🎭'}
                         {trip.category === 'sports' && '⚽'}
-                      </span>
+                      </button>
                     )}
                   </div>
 

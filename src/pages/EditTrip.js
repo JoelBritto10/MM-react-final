@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditTrip.css';
+import { getTrip, updateTrip, deleteTrip } from '../firebaseUtils';
 
 function EditTrip({ currentUser }) {
   const { id } = useParams();
@@ -19,16 +20,27 @@ function EditTrip({ currentUser }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load trip from localStorage using correct key
-    const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-    const trip = trips.find(t => t.id === id);
-    if (trip) {
-      setFormData(trip);
-    } else {
-      alert('Trip not found');
-      navigate('/home');
+    const loadTrip = async () => {
+      try {
+        const trip = await getTrip(id);
+        if (trip) {
+          setFormData(trip);
+        } else {
+          alert('Trip not found');
+          navigate('/home');
+        }
+      } catch (error) {
+        console.error('Error loading trip:', error);
+        alert('Error loading trip. Please try again.');
+        navigate('/home');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadTrip();
     }
-    setLoading(false);
   }, [id, navigate]);
 
   const handleChange = (e) => {
@@ -43,36 +55,29 @@ function EditTrip({ currentUser }) {
     e.preventDefault();
 
     try {
-      // Update trip in localStorage
-      const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      const tripIndex = trips.findIndex(t => t.id === id);
-      
-      if (tripIndex !== -1) {
-        trips[tripIndex] = { ...formData, id };
-        localStorage.setItem('mapmates_trips', JSON.stringify(trips));
-        alert('✅ Trip updated successfully!');
-        navigate('/home');
-      } else {
-        alert('Trip not found');
-      }
+      // Update trip in Firebase
+      await updateTrip(id, {
+        ...formData,
+        updatedAt: new Date().toISOString()
+      });
+      alert('✅ Trip updated successfully!');
+      navigate('/home');
     } catch (error) {
       console.error('Update trip error:', error);
-      alert('Error updating trip. Please try again.');
+      alert('❌ Error updating trip. Please try again.');
     }
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this trip?')) {
+    if (window.confirm('Are you sure you want to delete this trip? All associated group chats will also be deleted.')) {
       try {
-        // Delete trip from localStorage
-        const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-        const filteredTrips = trips.filter(t => t.id !== id);
-        localStorage.setItem('mapmates_trips', JSON.stringify(filteredTrips));
-        alert('✅ Trip deleted successfully!');
+        // Delete trip from Firebase
+        await deleteTrip(id);
+        alert('✅ Trip and associated group chats deleted successfully!');
         navigate('/home');
       } catch (error) {
         console.error('Delete trip error:', error);
-        alert('Error deleting trip. Please try again.');
+        alert('❌ Error deleting trip. Please try again.');
       }
     }
   };

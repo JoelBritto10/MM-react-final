@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Chat.css';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function Chat({ currentUser }) {
+  const navigate = useNavigate();
   const [messagesByTrip, setMessagesByTrip] = useState({});
   const [userTrips, setUserTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +56,54 @@ function Chat({ currentUser }) {
   };
 
   useEffect(() => {
-    loadMessages();
     const savedReadStatus = JSON.parse(localStorage.getItem('messageReadStatus') || '{}');
     setReadStatus(savedReadStatus);
+  }, []);
+
+  // Subscribe to Firebase trips in real-time
+  useEffect(() => {
+    const unsubscribe = subscribeToTrips((firebaseTrips) => {
+      if (!currentUser) {
+        return;
+      }
+
+      // Filter trips where user is participant or host
+      const myTrips = firebaseTrips.filter(trip => {
+        const isParticipant = trip.participants && trip.participants.includes(currentUser.id || currentUser.uid);
+        const isHost = trip.hostId === (currentUser.id || currentUser.uid);
+        return isParticipant || isHost;
+      });
+
+      setUserTrips(myTrips);
+
+      // Load messages from localStorage (grouped by trip)
+      const tripMessages = JSON.parse(localStorage.getItem('tripMessages')) || {};
+      let groupedMessages = {};
+
+      myTrips.forEach(trip => {
+        const tripId = trip.id;
+        const messages = tripMessages[tripId] || [];
+        const validMessages = messages.filter(msg => msg.tripId === tripId);
+
+        groupedMessages[tripId] = {
+          trip: trip,
+          messages: validMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+        };
+      });
+
+      setMessagesByTrip(groupedMessages);
+      setLoading(false);
+
+      // Clean up messages for deleted trips
+      Object.keys(tripMessages).forEach(tripId => {
+        if (!myTrips.find(t => t.id === tripId)) {
+          delete tripMessages[tripId];
+        }
+      });
+      localStorage.setItem('tripMessages', JSON.stringify(tripMessages));
+    });
+
+    return () => unsubscribe();
   }, [currentUser]);
 
   useEffect(() => {
@@ -64,41 +112,6 @@ function Chat({ currentUser }) {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const loadMessages = () => {
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
-
-    const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-    
-    const myTrips = trips.filter(trip => {
-      const isParticipant = trip.participants && trip.participants.includes(currentUser.id || currentUser.uid);
-      const isHost = trip.hostId === (currentUser.id || currentUser.uid);
-      return isParticipant || isHost;
-    });
-    
-    setUserTrips(myTrips);
-
-    const tripMessages = JSON.parse(localStorage.getItem('tripMessages')) || {};
-    
-    let groupedMessages = {};
-    
-    myTrips.forEach(trip => {
-      const tripId = trip.id;
-      const messages = tripMessages[tripId] || [];
-      const validMessages = messages.filter(msg => msg.tripId === tripId);
-      
-      groupedMessages[tripId] = {
-        trip: trip,
-        messages: validMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-      };
-    });
-    
-    setMessagesByTrip(groupedMessages);
-    setLoading(false);
   };
 
   const handleSendMessage = (e) => {
@@ -349,34 +362,35 @@ function Chat({ currentUser }) {
                 : '';
 
               return (
-                <button
-                  key={tripId}
-                  onClick={() => {
-                    setSelectedTripId(tripId);
-                    markMessagesAsRead(tripId);
-                  }}
-                  className="conversation-item"
-                >
-                  <div className="conv-avatar">📍</div>
-                  
-                  <div className="conv-content">
-                    <div className="conv-header">
-                      <h3 className="conv-title">{trip.title}</h3>
-                      <span className="conv-time">{lastMessageTime}</span>
+                <div key={tripId} className="conversation-item-wrapper">
+                  <button
+                    onClick={() => {
+                      setSelectedTripId(tripId);
+                      markMessagesAsRead(tripId);
+                    }}
+                    className="conversation-item"
+                  >
+                    <div className="conv-avatar">📍</div>
+                    
+                    <div className="conv-content">
+                      <div className="conv-header">
+                        <h3 className="conv-title">{trip.title}</h3>
+                        <span className="conv-time">{lastMessageTime}</span>
+                      </div>
+                      
+                      <p className="conv-preview">
+                        {lastMessage 
+                          ? `${lastMessage.username === (currentUser.displayName || currentUser.username) ? 'You: ' : ''}${lastMessage.message.substring(0, 60)}${lastMessage.message.length > 60 ? '...' : ''}`
+                          : 'No messages yet'
+                        }
+                      </p>
+                      
+                      {messages.length > 0 && hasUnreadMessages(tripId) && (
+                        <span className="msg-count">{messages.length}</span>
+                      )}
                     </div>
-                    
-                    <p className="conv-preview">
-                      {lastMessage 
-                        ? `${lastMessage.username === (currentUser.displayName || currentUser.username) ? 'You: ' : ''}${lastMessage.message.substring(0, 60)}${lastMessage.message.length > 60 ? '...' : ''}`
-                        : 'No messages yet'
-                      }
-                    </p>
-                    
-                    {messages.length > 0 && hasUnreadMessages(tripId) && (
-                      <span className="msg-count">{messages.length}</span>
-                    )}
-                  </div>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </div>

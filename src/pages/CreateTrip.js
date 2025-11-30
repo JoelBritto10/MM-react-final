@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CreateTrip.css';
+import { extractCoordinatesFromUrl, isValidGoogleMapsUrl, createGoogleMapsUrl } from '../utils/mapsUrlParser';
+import { createTrip, uploadTripImage, uploadTripDocument } from '../firebaseUtils';
 
 // Utility function to compress image
 const compressImage = (base64String, maxWidth = 400, maxHeight = 400, quality = 0.65) => {
@@ -47,7 +49,8 @@ function CreateTrip({ currentUser }) {
     image: null,
     category: 'all',
     maxCount: '',
-    tripType: 'group'
+    tripType: 'group',
+    documents: [] // New: documents array
   });
 
   const categories = ['all', 'beach', 'mountain', 'city', 'adventure', 'culture', 'sports'];
@@ -56,6 +59,7 @@ function CreateTrip({ currentUser }) {
   const [urlInput, setUrlInput] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState([]); // New: track uploaded documents
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -91,9 +95,9 @@ function CreateTrip({ currentUser }) {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 3MB)
-      if (file.size > 3 * 1024 * 1024) {
-        alert('Image is too large. Please choose an image under 3MB.');
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image is too large. Please choose an image under 10MB.');
         return;
       }
 
@@ -116,34 +120,94 @@ function CreateTrip({ currentUser }) {
     }
   };
 
-  // Handle URL input for direct coordinates
-  const handleUrlInput = (e) => {
-    e?.preventDefault?.();
-    if (!urlInput.trim()) {
-      alert('Please enter a Google Maps URL');
-      return;
-    }
+  // Handle document upload (up to 20MB)
+  const handleDocumentUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Document is too large. Please choose a file under 20MB.');
+        return;
+      }
 
-    const urlMatch = urlInput.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    
-    if (urlMatch) {
-      const lat = parseFloat(urlMatch[1]);
-      const lng = parseFloat(urlMatch[2]);
-      const mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z`;
+      // Check file type (allow common document formats)
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
 
-      setUserLocation({ lat, lng });
-      setFormData(prev => ({
-        ...prev,
-        mapsUrl: mapsUrl
-      }));
-      setUrlInput('');
-      alert('✅ Location added!');
-    } else {
-      alert('Invalid Google Maps URL. Please copy the URL from Google Maps.');
+      if (!allowedTypes.includes(file.type)) {
+        alert('❌ Invalid file type. Please upload:\n• PDF\n• Word (DOC/DOCX)\n• Excel (XLS/XLSX)\n• Text files\n• Images (JPG/PNG/GIF)');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const documentData = {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            data: reader.result
+          };
+
+          setUploadedDocuments(prev => [...prev, documentData]);
+          
+          // Reset file input
+          document.getElementById('document-upload').value = '';
+          alert(`✅ Document "${file.name}" added successfully!`);
+        } catch (error) {
+          console.error('Error processing document:', error);
+          alert('Error processing document. Please try again.');
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e) => {
+  // Remove document
+  const handleRemoveDocument = (index) => {
+    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+  const handleUrlInput = async (e) => {
+    e?.preventDefault?.();
+    if (!urlInput.trim()) {
+      alert('Please enter a Google Maps shortened link');
+      return;
+    }
+
+    const url = urlInput.trim();
+
+    // Validate URL format
+    if (!isValidGoogleMapsUrl(url)) {
+      alert('❌ Invalid link format.\n\n📌 Only shortened Google Maps links are accepted:\n• https://maps.app.goo.gl/...\n\n💡 How to get a shortened link:\n1. Open Google Maps\n2. Find your location\n3. Click "Share" button\n4. Copy the shortened link\n5. Paste it here');
+      return;
+    }
+
+    // Extract/validate shortened URL
+    const result = await extractCoordinatesFromUrl(url);
+
+    if (result.success) {
+      // For shortened URLs, store the URL itself
+      setFormData(prev => ({
+        ...prev,
+        mapsUrl: url // Store the shortened URL directly
+      }));
+      setUrlInput('');
+      alert('✅ Location link added successfully!');
+    } else {
+      alert('❌ ' + (result.error || 'Invalid link.'));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate required fields
@@ -180,31 +244,47 @@ function CreateTrip({ currentUser }) {
     setIsSubmitting(true);
 
     try {
-      // Get existing trips from localStorage
-      const existingTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      
-      const newTrip = {
-        id: Date.now().toString(),
+      // Prepare trip data
+      const tripData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         location: formData.location.trim(),
         date: formData.date,
         time: formData.time,
         mapsUrl: formData.mapsUrl,
-        hostId: currentUser?.uid || 'demo-user',
-        hostName: currentUser?.displayName || 'User',
-        participants: [currentUser?.uid || 'demo-user'],
+        hostId: currentUser?.id || currentUser?.uid,
+        hostName: currentUser?.username || currentUser?.displayName || 'User',
+        hostAvatar: currentUser?.avatar || null,
+        participants: [currentUser?.id || currentUser?.uid],
+        participantCount: 1,
         image: formData.image || null,
         category: formData.category,
         maxCount: formData.maxCount ? parseInt(formData.maxCount) : null,
         tripType: formData.tripType,
-        createdAt: new Date().toISOString()
+        documents: uploadedDocuments.length > 0 ? uploadedDocuments : [], // Add documents
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      // Add to existing trips
-      existingTrips.push(newTrip);
-      localStorage.setItem('mapmates_trips', JSON.stringify(existingTrips));
+      // Upload image to Firebase Storage if exists
+      if (formData.image && currentUser?.id) {
+        try {
+          const imageUrl = await uploadTripImage(currentUser.id, formData.image, tripData.title);
+          if (imageUrl) {
+            tripData.image = imageUrl;
+          } else {
+            console.warn('Image upload returned null, continuing without image');
+            tripData.image = null;
+          }
+        } catch (imageError) {
+          console.warn('Image upload failed, continuing without image:', imageError);
+          tripData.image = null;
+        }
+      }
 
+      // Create trip in Firebase
+      const tripId = await createTrip(tripData);
+      
       alert('✅ Trip created successfully!');
       
       // Reset form
@@ -218,14 +298,17 @@ function CreateTrip({ currentUser }) {
         image: null,
         category: 'all',
         maxCount: '',
-        tripType: 'group'
+        tripType: 'group',
+        documents: []
       });
       setImagePreview(null);
+      setUrlInput('');
+      setUploadedDocuments([]);
       
       navigate('/home');
     } catch (error) {
       console.error('Error creating trip:', error);
-      alert('Error creating trip: ' + error.message);
+      alert('❌ Error creating trip: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -377,9 +460,60 @@ function CreateTrip({ currentUser }) {
               )}
             </div>
           </div>
+
+          {/* Document Upload Section */}
+          <div className="form-group">
+            <label>📄 Trip Documents (Optional - up to 20MB each)</label>
+            <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
+              Upload verification documents, itineraries, permits, or other trip details (PDF, Word, Excel, Images, Text)
+            </p>
+            <div className="document-upload-container">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif"
+                onChange={handleDocumentUpload}
+                className="document-input"
+                id="document-upload"
+              />
+              <label htmlFor="document-upload" className="document-upload-label">
+                📎 Upload Document (Max 20MB)
+              </label>
+            </div>
+
+            {/* Display uploaded documents */}
+            {uploadedDocuments.length > 0 && (
+              <div className="uploaded-documents">
+                <h4>Uploaded Documents ({uploadedDocuments.length}):</h4>
+                <ul className="documents-list">
+                  {uploadedDocuments.map((doc, index) => (
+                    <li key={index} className="document-item">
+                      <span className="doc-icon">📄</span>
+                      <div className="doc-info">
+                        <span className="doc-name">{doc.fileName}</span>
+                        <span className="doc-size">
+                          {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-small btn-remove"
+                        onClick={() => handleRemoveDocument(index)}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p style={{ fontSize: '12px', color: '#667eea', marginTop: '10px' }}>
+                  ✅ Documents will be stored in Firebase and visible only to trip details (not on homepage)
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="location-picker-section">
             <h3>📍 Trip Location</h3>
-            <p className="helper-text">Paste a Google Maps URL to set your trip location:</p>
+            <p className="helper-text">Paste a shortened Google Maps link to set your trip location:</p>
 
             {/* URL Input - Simple */}
             <div className="picker-method">
@@ -388,7 +522,7 @@ function CreateTrip({ currentUser }) {
                   type="text"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
-                  placeholder="Paste Google Maps URL here"
+                  placeholder="Paste shortened Google Maps link here"
                   className="url-input"
                 />
                 <button 
@@ -400,7 +534,15 @@ function CreateTrip({ currentUser }) {
                 </button>
               </div>
               <p className="helper-text" style={{ marginTop: '8px', fontSize: '12px' }}>
-                💡 How to get URL: Open Google Maps, find your location, and copy the URL from the address bar
+                📌 Only shortened links accepted:<br/>
+                • <code style={{background: '#f0f0f0', padding: '2px 6px'}}>https://maps.app.goo.gl/...</code><br/>
+                <br/>
+                💡 Quick steps:<br/>
+                1. Open Google Maps<br/>
+                2. Find your location<br/>
+                3. Click "Share" button<br/>
+                4. Copy the shortened link<br/>
+                5. Paste it here
               </p>
             </div>
           </div>

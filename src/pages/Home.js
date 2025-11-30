@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Home.css';
+import { updateTrip, subscribeToTrips, sendTripJoinConfirmation } from '../firebaseUtils';
 
 function Home({ currentUser }) {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -13,28 +16,38 @@ function Home({ currentUser }) {
     }
   }, [currentUser, navigate]);
 
-  // Load trips from localStorage
+  // Load trips from Firebase
   useEffect(() => {
-    const loadTrips = () => {
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      setTrips(storedTrips);
-    };
+    const unsubscribe = subscribeToTrips((firebaseTrips) => {
+      setTrips(firebaseTrips);
+    });
 
-    loadTrips();
-
-    // Set up listener for storage changes
-    window.addEventListener('storage', loadTrips);
-    return () => window.removeEventListener('storage', loadTrips);
+    return () => unsubscribe();
   }, []);
 
+  // Filter trips by category
+  useEffect(() => {
+    let results = trips;
+    if (selectedCategory !== 'all') {
+      results = trips.filter(trip => trip.category === selectedCategory);
+    }
+    setFilteredTrips(results);
+  }, [trips, selectedCategory]);
+
   // Handle joining a trip
-  const handleJoinTrip = (trip) => {
+  const handleJoinTrip = async (trip) => {
     if (!currentUser) {
       alert('Please log in to join a trip');
       return;
     }
 
-    const userId = currentUser?.uid || 'demo-user';
+    if (!trip.id) {
+      console.error('Trip ID is missing:', trip);
+      alert('❌ Invalid trip. Please refresh the page and try again.');
+      return;
+    }
+
+    const userId = currentUser?.id || currentUser?.uid;
 
     // Check if user already joined
     if (trip.participants && trip.participants.includes(userId)) {
@@ -49,19 +62,28 @@ function Home({ currentUser }) {
     }
 
     try {
-      // Update trip participants in localStorage
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      const tripIndex = storedTrips.findIndex(t => t.id === trip.id);
+      // Update trip participants in Firebase
+      const updatedParticipants = [...(trip.participants || []), userId];
+      await updateTrip(trip.id, {
+        participants: updatedParticipants,
+        participantCount: updatedParticipants.length,
+        updatedAt: new Date().toISOString()
+      });
       
-      if (tripIndex !== -1) {
-        storedTrips[tripIndex].participants = [...(storedTrips[tripIndex].participants || []), userId];
-        localStorage.setItem('mapmates_trips', JSON.stringify(storedTrips));
-        setTrips(storedTrips);
-        alert('Successfully joined the trip!');
-      }
+      // Send confirmation email
+      await sendTripJoinConfirmation(
+        currentUser.email,
+        currentUser.username || currentUser.email.split('@')[0],
+        trip.title,
+        trip.location,
+        new Date(trip.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        trip.hostName
+      );
+      
+      alert('✅ Successfully joined the trip! Check your email for confirmation.');
     } catch (error) {
       console.error('Error joining trip:', error);
-      alert('Failed to join trip. Please try again.');
+      alert('❌ Failed to join trip. This trip may have been deleted. Please refresh the page.');
     }
   };
 
@@ -69,18 +91,42 @@ function Home({ currentUser }) {
     <div className="container">
       <div className="page-header">
         <h1>Discover trips</h1>
-        <Link to="/create-trip" className="btn-primary">+ Create trip</Link>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {selectedCategory !== 'all' && (
+            <button 
+              onClick={() => setSelectedCategory('all')}
+              className="btn-secondary"
+              style={{ padding: '8px 12px', fontSize: '14px' }}
+            >
+              ✕ Clear filter ({selectedCategory})
+            </button>
+          )}
+          <Link to="/create-trip" className="btn-primary-small">+ Create</Link>
+        </div>
       </div>
 
       <div className="trips-container">
-        {trips.length === 0 ? (
+        {filteredTrips.length === 0 ? (
           <div className="empty-state">
-            <h3>No trips yet</h3>
-            <p>Be the first to create a trip!</p>
+            <h3>No trips {selectedCategory !== 'all' ? `in ${selectedCategory}` : 'yet'}</h3>
+            <p>
+              {selectedCategory !== 'all' 
+                ? 'Try selecting a different category or create a new trip!' 
+                : 'Be the first to create a trip!'}
+            </p>
+            {selectedCategory !== 'all' && (
+              <button 
+                onClick={() => setSelectedCategory('all')}
+                className="btn-primary"
+                style={{ marginRight: '10px' }}
+              >
+                View All Trips
+              </button>
+            )}
             <Link to="/create-trip" className="btn-primary">Create trip</Link>
           </div>
         ) : (
-          trips.map(trip => {
+          filteredTrips.map(trip => {
             const isHost = trip.hostId === currentUser?.id;
             const hasJoined = trip.participants && trip.participants.includes(currentUser?.id);
             const participantCount = trip.participants?.length || 0;
@@ -98,7 +144,21 @@ function Home({ currentUser }) {
                     style={{ backgroundImage: `url('${trip.image}')` }}
                   >
                     <div className="trip-image-overlay">
-                      <span className="trip-category">{trip.category || '🌍 Trip'}</span>
+                      <button
+                        onClick={() => setSelectedCategory(trip.category)}
+                        className="trip-category"
+                        style={{ 
+                          cursor: 'pointer', 
+                          border: 'none', 
+                          background: 'rgba(0, 0, 0, 0.6)', 
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          transition: 'background 0.2s'
+                        }}
+                        title={`Filter by ${trip.category}`}
+                      >
+                        {trip.category || '🌍 Trip'}
+                      </button>
                       {daysUntilTrip > 0 && (
                         <span className="trip-countdown">{daysUntilTrip} days away</span>
                       )}

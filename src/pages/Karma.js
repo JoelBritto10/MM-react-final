@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './Karma.css';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function Karma({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userKarmaBreakdown, setUserKarmaBreakdown] = useState({});
+  const [firebaseTrips, setFirebaseTrips] = useState([]);
 
   // Function to analyze sentiment in review text
   const analyzeSentiment = (text) => {
@@ -74,8 +76,7 @@ function Karma({ currentUser }) {
   };
 
   // Function to calculate total karma from all reviews for a user
-  const calculateTotalKarmaFromReviews = () => {
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
+  const calculateTotalKarmaFromReviews = (trips) => {
     const tripReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
     const users = JSON.parse(localStorage.getItem('users')) || [];
     const breakdown = {};
@@ -85,6 +86,17 @@ function Karma({ currentUser }) {
     users.forEach(user => {
       userKarmaMap[user.id] = 0;
     });
+
+    // Get valid trip IDs from Firebase
+    const validTripIds = trips.map(t => t.id);
+
+    // Clean up reviews for deleted trips
+    Object.keys(tripReviews).forEach(tripId => {
+      if (!validTripIds.includes(tripId)) {
+        delete tripReviews[tripId];
+      }
+    });
+    localStorage.setItem('tripReviews', JSON.stringify(tripReviews));
 
     // For each trip, check if current user is the host and calculate karma from reviews
     trips.forEach(trip => {
@@ -123,9 +135,20 @@ function Karma({ currentUser }) {
     setUserKarmaBreakdown(breakdown);
   };
 
+  // Subscribe to Firebase trips in real-time
+  useEffect(() => {
+    const unsubscribe = subscribeToTrips((trips) => {
+      setFirebaseTrips(trips);
+      // Recalculate karma whenever trips change
+      calculateTotalKarmaFromReviews(trips);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     // Calculate karma from reviews and get updated user list
-    calculateTotalKarmaFromReviews();
+    calculateTotalKarmaFromReviews(firebaseTrips);
     
     // Refresh user list after calculation
     setTimeout(() => {
@@ -133,7 +156,7 @@ function Karma({ currentUser }) {
       const sorted = storedUsers.sort((a, b) => (b.karma || 0) - (a.karma || 0));
       setUsers(sorted);
     }, 100);
-  }, [refreshTrigger, currentUser?.id]);
+  }, [refreshTrigger, currentUser?.id, firebaseTrips]);
 
   // Auto-refresh leaderboard every 5 seconds to show latest karma updates
   useEffect(() => {

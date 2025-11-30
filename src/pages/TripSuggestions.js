@@ -4,6 +4,7 @@ import './TripSuggestions.css';
 import AIRecommendationEngine from '../utils/aiRecommendationEngine';
 import DESTINATION_DATASET from '../utils/destinationDataset';
 import { generateEmbedding } from '../utils/embeddingUtils';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function TripSuggestions({ currentUser }) {
   const navigate = useNavigate();
@@ -14,10 +15,8 @@ function TripSuggestions({ currentUser }) {
   const [aiEngine] = useState(new AIRecommendationEngine(DESTINATION_DATASET));
   const [travelPersona, setTravelPersona] = useState('Explorer');
   const [noResults, setNoResults] = useState(false);
-  const [destinationChatGroups, setDestinationChatGroups] = useState({});
-  const [destinationMessages, setDestinationMessages] = useState({});
-  const [userInsights, setUserInsights] = useState(null); // NEW: Advanced AI insights
-  const [showAdvancedInsights, setShowAdvancedInsights] = useState(false); // NEW: Toggle insights
+  const [userInsights, setUserInsights] = useState(null);
+  const [showAdvancedInsights, setShowAdvancedInsights] = useState(false);
 
   // Extract region from location
   const extractRegion = useCallback((location) => {
@@ -103,75 +102,56 @@ function TripSuggestions({ currentUser }) {
       navigate('/login');
     }
   }, [currentUser, navigate]);
+  
   useEffect(() => {
-    try {
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      
-      const analyzedPreferences = analyzeUserPreferences(storedTrips, currentUser?.id);
-      
-      const userProfileEmbedding = generateEmbedding(
-        (analyzedPreferences.favoriteCategories || []).join(' ') + ' ' +
-        (analyzedPreferences.favoriteRegions || []).join(' ')
-      );
-      
-      const enhancedUserProfile = {
-        ...analyzedPreferences,
-        embedding: userProfileEmbedding,
-        id: currentUser?.id
-      };
-      
-      setUserPreferences(enhancedUserProfile);
-      
-      generateAISuggestionsWithEngine(
-        enhancedUserProfile, 
-        selectedInterests, 
-        storedTrips,
-        aiEngine
-      );
-      
-      const persona = aiEngine.generateTravelPersona(enhancedUserProfile, storedTrips);
-      setTravelPersona(persona);
-
-      // NEW: Generate comprehensive user insights
-      const insights = aiEngine.generateUserInsights(enhancedUserProfile, storedTrips);
-      setUserInsights(insights);
-
-      // Load destination chat groups and messages
-      const groups = JSON.parse(localStorage.getItem('destinationChatGroups') || '[]');
-      const messagesData = JSON.parse(localStorage.getItem('destinationChatMessages') || '{}');
-      
-      // Group by destination
-      const groupsByDestination = {};
-      groups.forEach(group => {
-        groupsByDestination[group.destination] = group;
-      });
-      
-      setDestinationChatGroups(groupsByDestination);
-      setDestinationMessages(messagesData);
-    } catch (err) {
-      console.error('Error loading suggestions:', err);
-    } finally {
-      setLoading(false);
+    if (!currentUser) {
+      return;
     }
+
+    // Subscribe to Firebase trips instead of using localStorage
+    const unsubscribe = subscribeToTrips((firebaseTrips) => {
+      try {
+        const storedTrips = firebaseTrips || [];
+        
+        const analyzedPreferences = analyzeUserPreferences(storedTrips, currentUser?.id);
+        
+        const userProfileEmbedding = generateEmbedding(
+          (analyzedPreferences.favoriteCategories || []).join(' ') + ' ' +
+          (analyzedPreferences.favoriteRegions || []).join(' ')
+        );
+        
+        const enhancedUserProfile = {
+          ...analyzedPreferences,
+          embedding: userProfileEmbedding,
+          id: currentUser?.id
+        };
+        
+        setUserPreferences(enhancedUserProfile);
+        
+        generateAISuggestionsWithEngine(
+          enhancedUserProfile, 
+          selectedInterests, 
+          storedTrips,
+          aiEngine
+        );
+        
+        const persona = aiEngine.generateTravelPersona(enhancedUserProfile, storedTrips);
+        setTravelPersona(persona);
+        // Generate comprehensive user insights
+        const insights = aiEngine.generateUserInsights(enhancedUserProfile, storedTrips);
+        setUserInsights(insights);
+
+        // Chat groups and messages are now in Firebase
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading suggestions:', err);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, [currentUser, selectedInterests, aiEngine, analyzeUserPreferences, generateAISuggestionsWithEngine]);
-
-  // Polling for real-time message updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const groups = JSON.parse(localStorage.getItem('destinationChatGroups') || '[]');
-      const messagesData = JSON.parse(localStorage.getItem('destinationChatMessages') || '{}');
-      
-      const groupsByDestination = {};
-      groups.forEach(group => {
-        groupsByDestination[group.destination] = group;
-      });
-      
-      setDestinationChatGroups(groupsByDestination);
-      setDestinationMessages(messagesData);
-    }, 2000); // Update every 2 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Handle interest selection
   const handleInterestToggle = (category) => {
@@ -184,19 +164,8 @@ function TripSuggestions({ currentUser }) {
 
   // Get message info for a destination
   const getDestinationMessageInfo = (destination) => {
-    const groups = JSON.parse(localStorage.getItem('destinationChatGroups') || '[]');
-    const groupForDest = groups.find(g => g.destination === destination.name);
-    
-    if (!groupForDest) return { count: 0, latestMessage: null };
-    
-    const messagesData = JSON.parse(localStorage.getItem('destinationChatMessages') || '{}');
-    const messages = messagesData[groupForDest.id] || [];
-    
-    return {
-      count: messages.length,
-      latestMessage: messages.length > 0 ? messages[messages.length - 1] : null,
-      groupId: groupForDest.id
-    };
+    // Messages are now in Firebase
+    return { count: 0, latestMessage: null, groupId: null };
   };
 
   if (loading) {
@@ -533,10 +502,9 @@ function TripSuggestions({ currentUser }) {
                                 isVirtualDestinationChat: true
                               };
                               
-                              // Store the virtual group
-                              const existingGroups = JSON.parse(localStorage.getItem('destinationChatGroups') || '[]');
-                              existingGroups.push(virtualGroup);
-                              localStorage.setItem('destinationChatGroups', JSON.stringify(existingGroups));
+                              // Virtual groups are now handled in Firebase
+                              // No need to store in localStorage anymore
+                              console.log('Virtual group created:', virtualGroup);
                             }
                             
                             // Navigate to the group chat with the virtual group info

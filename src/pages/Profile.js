@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { uploadUserImage, updateUserProfile } from '../firebaseUtils';
+import { uploadUserImage, updateUserProfile, subscribeToTrips } from '../firebaseUtils';
 import './Profile.css';
 
 // Utility function to compress image
@@ -83,11 +83,14 @@ function Profile({ currentUser, onUpdateUser }) {
   }, [isEditing]);
 
   useEffect(() => {
-    // Load trips from localStorage
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
-    // Filter trips hosted by current user
-    const userTrips = trips.filter(trip => trip.hostId === currentUser?.id);
-    setHostedTrips(userTrips);
+    // Load trips from Firebase
+    const unsubscribe = subscribeToTrips((firebaseTrips) => {
+      // Filter trips hosted by current user
+      const userTrips = firebaseTrips.filter(trip => trip.hostId === currentUser?.id);
+      setHostedTrips(userTrips);
+    });
+    
+    return () => unsubscribe();
   }, [currentUser?.id]);
 
   useEffect(() => {
@@ -108,9 +111,9 @@ function Profile({ currentUser, onUpdateUser }) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Image is too large. Please choose an image under 2MB.');
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image is too large. Please choose an image under 10MB.');
       return;
     }
 
@@ -137,9 +140,9 @@ function Profile({ currentUser, onUpdateUser }) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Check file size (max 3MB for background)
-    if (file.size > 3 * 1024 * 1024) {
-      alert('Image is too large. Please choose an image under 3MB.');
+    // Check file size (max 10MB for background)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image is too large. Please choose an image under 10MB.');
       return;
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './TripExplore.css';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function TripExplore({ currentUser }) {
   const [trips, setTrips] = useState([]);
@@ -12,6 +13,7 @@ function TripExplore({ currentUser }) {
   const [activeTab, setActiveTab] = useState('search'); // 'search' or 'map'
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  const [availableCategories, setAvailableCategories] = useState([]); // New: track unique categories
 
   // Get user's real-time location
   useEffect(() => {
@@ -36,17 +38,22 @@ function TripExplore({ currentUser }) {
     }
   }, []);
 
-  // Load trips from localStorage
+  // Load trips from Firebase (real-time)
   useEffect(() => {
-    try {
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      setTrips(storedTrips);
-      setFilteredTrips(storedTrips);
+    const unsubscribe = subscribeToTrips((firebaseTrips) => {
+      console.log('✅ Loaded trips from Firebase:', firebaseTrips.length);
+      setTrips(firebaseTrips);
+      setFilteredTrips(firebaseTrips);
+      
+      // Extract unique categories from trips
+      const uniqueCategories = [...new Set(firebaseTrips.map(trip => trip.category).filter(cat => cat && cat !== 'all'))];
+      const categories = ['all', ...uniqueCategories.sort()];
+      setAvailableCategories(categories);
+      
       setLoading(false);
-    } catch (error) {
-      console.error('Error loading trips:', error);
-      setLoading(false);
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Filter and sort trips
@@ -162,48 +169,6 @@ function TripExplore({ currentUser }) {
 
             {/* Filters Row */}
             <div className="filters-row">
-              {/* Category Filter */}
-              <div className="filter-group">
-                <label>Category</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="Beach">Beach</option>
-                  <option value="Mountain">Mountain</option>
-                  <option value="City">City</option>
-                  <option value="Adventure">Adventure</option>
-                  <option value="Cultural">Cultural</option>
-                  <option value="Food">Food</option>
-                  <option value="Spiritual">Spiritual</option>
-                  <option value="Wellness">Wellness</option>
-                </select>
-              </div>
-
-              {/* Sort Filter */}
-              <div className="filter-group">
-                <label>Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="newest">Newest</option>
-                  <option value="oldest">Oldest</option>
-                  <option value="title-asc">Title A-Z</option>
-                  <option value="title-desc">Title Z-A</option>
-                </select>
-              </div>
-
-              {/* Clear Filters Button */}
-              <button
-                onClick={handleClearFilters}
-                className="clear-filters-btn"
-              >
-                Clear Filters
-              </button>
             </div>
           </div>
 

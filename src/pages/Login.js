@@ -63,23 +63,15 @@ function Login({ onLogin }) {
 
     try {
       await sendPasswordReset(resetEmail);
-      setResetMessage('✅ Password reset link sent! Check your email.');
+      setResetMessage('✅ Password reset link sent! Check your email (including spam folder). The link expires in 1 hour.');
       setResetEmail('');
       setTimeout(() => {
         setShowForgotPassword(false);
         setResetMessage('');
-      }, 3000);
+      }, 4000);
     } catch (err) {
       console.error('Password reset error:', err);
-      if (err.code === 'auth/user-not-found') {
-        setError('Email not found. Please check and try again.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email format.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many reset requests. Please try again later.');
-      } else {
-        setError(err.message || 'Failed to send reset email. Please try again.');
-      }
+      setError(err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setResetLoading(false);
     }

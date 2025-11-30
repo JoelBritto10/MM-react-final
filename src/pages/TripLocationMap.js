@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './TripLocationMap.css';
+import { subscribeToTrips } from '../firebaseUtils';
 
 function TripLocationMap({ currentUser }) {
   const { tripId } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mapUrl, setMapUrl] = useState('');
   const [error, setError] = useState('');
 
   // Redirect to login if not authenticated
@@ -17,41 +17,27 @@ function TripLocationMap({ currentUser }) {
     }
   }, [currentUser, navigate]);
 
-  // Load trip from localStorage
+  // Load trip from Firebase
   useEffect(() => {
     try {
-      const storedTrips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
-      const foundTrip = storedTrips.find(t => t.id === tripId);
-      
-      if (foundTrip) {
-        setTrip(foundTrip);
-        // Generate Google Maps URL with location pointer
-        if (foundTrip.location) {
-          const mapsUrl = generateGoogleMapsUrl(foundTrip.location);
-          setMapUrl(mapsUrl);
+      const unsubscribe = subscribeToTrips((firebaseTrips) => {
+        const foundTrip = firebaseTrips.find(t => t.id === tripId);
+        
+        if (foundTrip) {
+          setTrip(foundTrip);
+        } else {
+          setError('Trip not found');
         }
-      } else {
-        setError('Trip not found');
-      }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
     } catch (err) {
       console.error('Error loading trip:', err);
       setError('Failed to load trip');
-    } finally {
       setLoading(false);
     }
   }, [tripId]);
-
-  // Generate Google Maps URL with location pointer
-  const generateGoogleMapsUrl = (location) => {
-    if (!location) return '';
-    
-    // Encode location for URL
-    const encodedLocation = encodeURIComponent(location);
-    
-    // Use iframe-compatible URL that shows the location with a marker
-    // This URL format ensures the marker appears at the location
-    return `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-  };
 
   // Open in new tab (external Google Maps)
   const openInGoogleMaps = () => {
@@ -163,28 +149,31 @@ function TripLocationMap({ currentUser }) {
         {/* Map Embed Section */}
         <div className="map-embed-section">
           <div className="map-container">
-            {mapUrl ? (
+            {trip.location ? (
               <>
-                <iframe
-                  title={`Map of ${trip.location}`}
-                  width="100%"
-                  height="500"
-                  frameBorder="0"
-                  src={mapUrl}
-                  style={{ borderRadius: '12px' }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen=""
-                  aria-hidden="false"
-                  tabIndex="0"
-                ></iframe>
-                <p style={{ fontSize: '12px', color: '#999', marginTop: '8px', textAlign: 'center' }}>
-                  📍 Location: {trip.location}
-                </p>
+                {/* Map Preview Image - Static Maps API with Location Overlay */}
+                <div className="map-preview-wrapper">
+                  <img 
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(trip.location)}&zoom=15&size=600x400&markers=color:red%7C${encodeURIComponent(trip.location)}&key=AIzaSyAIHFMkFApePoPqCOx6fLnWrxg7cFFfZJ4`}
+                    alt={`Map of ${trip.location}`}
+                    style={{ width: '100%', borderRadius: '12px', maxHeight: '400px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.target.src = `https://via.placeholder.com/600x400?text=Map+of+${trip.location}`;
+                    }}
+                    className="map-preview"
+                  />
+                  {/* Location Popup Overlay */}
+                  <div className="location-popup">
+                    <div className="popup-content">
+                      <span className="popup-icon">📍</span>
+                      <span className="popup-text">{trip.location}</span>
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               <div className="no-map">
-                <p>Unable to display map. Click "View on Google Maps" to see the location.</p>
+                <p>No location information available.</p>
               </div>
             )}
           </div>
@@ -226,13 +215,6 @@ function TripLocationMap({ currentUser }) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Quick Navigation */}
-      <div className="quick-nav">
-        <button onClick={() => navigate('/home')} className="btn-nav">Home</button>
-        <button onClick={() => navigate('/map')} className="btn-nav">Trip Map</button>
-        <button onClick={() => navigate(`/trip-group-chat/${tripId}`)} className="btn-nav">Chat</button>
       </div>
     </div>
   );

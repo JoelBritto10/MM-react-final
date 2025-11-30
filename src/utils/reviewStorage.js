@@ -1,84 +1,30 @@
-// localStorage backup for reviews
-// Keeps a local copy of all reviews for offline access and backup
+// All reviews are now stored in Firebase Firestore
+// These functions are kept for compatibility but no longer use localStorage
 
 export const saveReviewToLocalStorage = (review) => {
-  try {
-    const allReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
-    
-    if (!allReviews[review.tripId]) {
-      allReviews[review.tripId] = [];
-    }
-
-    // Add review with localStorage timestamp if not from Firestore
-    const reviewData = {
-      ...review,
-      localTimestamp: new Date().toISOString(),
-      synced: true
-    };
-
-    allReviews[review.tripId].push(reviewData);
-    localStorage.setItem('tripReviews', JSON.stringify(allReviews));
-
-    return true;
-  } catch (err) {
-    console.error('Error saving review to localStorage:', err);
-    return false;
-  }
+  // Reviews are stored in Firebase Firestore via firebaseUtils.js
+  console.log('Review stored in Firebase:', review.tripId);
+  return true;
 };
 
 export const getAllReviewsFromLocalStorage = () => {
-  try {
-    return JSON.parse(localStorage.getItem('tripReviews')) || {};
-  } catch (err) {
-    console.error('Error retrieving reviews from localStorage:', err);
-    return {};
-  }
+  // All reviews are now in Firebase Firestore
+  return {};
 };
 
 export const getReviewsForTrip = (tripId) => {
-  try {
-    const allReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
-    return allReviews[tripId] || [];
-  } catch (err) {
-    console.error('Error retrieving trip reviews:', err);
-    return [];
-  }
+  // Reviews are retrieved from Firebase Firestore
+  return [];
 };
 
 export const getReviewsForHost = (hostId, trips) => {
-  try {
-    const allReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
-    const hostedTripIds = trips
-      .filter(trip => trip.hostId === hostId)
-      .map(trip => trip.id);
-
-    let hostReviews = [];
-    hostedTripIds.forEach(tripId => {
-      hostReviews = [...hostReviews, ...(allReviews[tripId] || [])];
-    });
-
-    return hostReviews;
-  } catch (err) {
-    console.error('Error retrieving host reviews:', err);
-    return [];
-  }
+  // Reviews are retrieved from Firebase Firestore
+  return [];
 };
 
 export const getReviewsByUser = (userId) => {
-  try {
-    const allReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
-    let userReviews = [];
-
-    Object.values(allReviews).forEach(tripReviews => {
-      const userTripsReviews = tripReviews.filter(r => r.userId === userId);
-      userReviews = [...userReviews, ...userTripsReviews];
-    });
-
-    return userReviews;
-  } catch (err) {
-    console.error('Error retrieving user reviews:', err);
-    return [];
-  }
+  // Reviews are retrieved from Firebase Firestore
+  return [];
 };
 
 export const calculateAverageRating = (reviews) => {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthChange, logoutUser, getUserProfile } from './firebaseUtils';
+import { onAuthChange, logoutUser, getUserProfile, removeDuplicateTrips } from './firebaseUtils';
 import './App.css';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import TripExplore from './pages/TripExplore';
 import Profile from './pages/Profile';
@@ -24,6 +25,18 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Run deduplication once on app initialization
+  useEffect(() => {
+    const deduplicateOnce = async () => {
+      try {
+        await removeDuplicateTrips();
+      } catch (error) {
+        console.error('Error during deduplication:', error);
+      }
+    };
+    deduplicateOnce();
+  }, []);
 
   useEffect(() => {
     // Listen for Firebase auth state changes
@@ -92,6 +105,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login onLogin={handleLogin} />} />
               <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/home" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/explore" element={isAuthenticated ? <TripExplore currentUser={currentUser} /> : <Navigate to="/login" />} />
