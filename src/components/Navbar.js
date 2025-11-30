@@ -18,7 +18,8 @@ function Navbar({ onLogout, currentUser }) {
         </Link>
         <div className="nav-menu">
           <Link to="/home" className="nav-link">Trips</Link>
-          <Link to="/map" className="nav-link">Map</Link>
+          <Link to="/explore" className="nav-link">🔍 Explore</Link>
+          <Link to="/suggestions" className="nav-link">🤖 Suggestions</Link>
           <Link to="/chat" className="nav-link">Messages</Link>
           <Link to="/karma" className="nav-link">Karma</Link>
           <Link to="/feedback" className="nav-link">📋 Feedback</Link>

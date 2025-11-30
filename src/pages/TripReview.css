@@ -26,6 +26,100 @@
   text-align: center;
 }
 
+/* Trip Card Display Section */
+.trip-card-section {
+  margin-bottom: 40px;
+  padding: 20px 0;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.section-title {
+  color: #333;
+  font-size: 20px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-card-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  color: white;
+}
+
+.trip-card-image {
+  width: 100%;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+}
+
+.trip-card-content {
+  padding: 20px;
+}
+
+.trip-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.trip-category {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: white;
+}
+
+.trip-card-content .trip-location {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.trip-card-content .trip-date {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.trip-description {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 15px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.trip-host-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.host-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.host-name {
+  font-size: 16px;
+  color: white;
+  font-weight: 600;
+}
+
+.review-form-section {
+  margin-bottom: 30px;
+}
+
 .trip-review-info {
   background: #f9f9f9;
   padding: 20px;
@@ -216,4 +310,289 @@
   .review-actions .btn {
     max-width: 100%;
   }
+
+  .trip-card-display {
+    border-radius: 8px;
+  }
+
+  .trip-card-image {
+    height: 150px;
+  }
+
+  .trip-title {
+    font-size: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
 }
+
+/* Host Reviews Section */
+.host-reviews-section {
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.host-reviews-section .section-title {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.review-card {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.review-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 15px;
+}
+
+.reviewer-info {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.reviewer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e0e0e0;
+}
+
+.reviewer-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewer-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.review-date {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #999;
+}
+
+.review-comment {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555;
+  margin: 0;
+  font-style: italic;
+}
+
+.already-reviewed {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+  font-weight: 600;
+}
+
+/* Amazon-Style Review Card */
+.review-card.amazon-style-card {
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background: #fff;
+  transition: box-shadow 0.3s ease;
+}
+
+.review-card.amazon-style-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.review-rating-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sentiment-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Reviewer Avatar Placeholder */
+.reviewer-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* Host Reply Section */
+.host-reply-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.host-replies {
+  margin-bottom: 15px;
+}
+
+.host-reply {
+  background: #f9f9f9;
+  border-left: 4px solid #667eea;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.host-label {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 12px;
+}
+
+.reply-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.reply-text {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.reply-form-container {
+  margin-top: 12px;
+}
+
+.reply-form {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.reply-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.reply-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.reply-char-count {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+  text-align: right;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-reply-submit,
+.btn-reply-cancel {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-reply-submit {
+  background: #667eea;
+  color: white;
+}
+
+.btn-reply-submit:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.btn-reply-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-reply-cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn-reply-cancel:hover {
+  background: #e0e0e0;
+}
+
+.btn-reply-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.btn-reply-link:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+

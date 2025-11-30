@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../firebaseUtils';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import './Feedback.css';
 
 function Feedback({ currentUser }) {
@@ -19,52 +21,156 @@ function Feedback({ currentUser }) {
 
   useEffect(() => {
     loadReviews();
+    // Set up real-time listener
+    const setupRealtimeListener = async () => {
+      try {
+        const currentUserId = currentUser?.id || currentUser?.uid;
+        
+        // Listen to reviews for trips hosted by current user
+        const reviewsQuery = query(
+          collection(db, 'reviews'),
+          where('hostId', '==', currentUserId)
+        );
+        
+        const unsubscribe = onSnapshot(reviewsQuery, (snapshot) => {
+          loadReviews();
+        });
+
+        return unsubscribe;
+      } catch (err) {
+        console.error('Error setting up real-time listener:', err);
+      }
+    };
+
+    let unsubscribe;
+    setupRealtimeListener().then(unsub => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, currentUser]);
 
-  const loadReviews = () => {
-    const trips = JSON.parse(localStorage.getItem('trips')) || [];
-    const allReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
+  const loadReviews = async () => {
+    try {
+      const trips = JSON.parse(localStorage.getItem('mapmates_trips')) || [];
+      const localReviews = JSON.parse(localStorage.getItem('tripReviews')) || {};
+      const currentUserId = currentUser?.id || currentUser?.uid;
 
-    // Always fetch hosted trips for the "Trips" tab
-    const hostTrips = trips
-      .filter(trip => trip.hostId === currentUser.id)
-      .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
-    setHostedTrips(hostTrips);
+      // Always fetch hosted trips for the "Trips" tab
+      const hostTrips = trips
+        .filter(trip => trip.hostId === currentUserId)
+        .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+      setHostedTrips(hostTrips);
 
-    if (activeTab === 'received') {
-      // Get reviews for trips hosted by current user
-      const hostedTripsData = trips.filter(trip => trip.hostId === currentUser.id);
-      let receivedReviews = [];
-      const tripMap = {};
+      if (activeTab === 'received') {
+        // Get reviews for trips hosted by current user - FROM FIRESTORE
+        const hostedTripsData = trips.filter(trip => trip.hostId === currentUserId);
+        let receivedReviews = [];
+        const tripMap = {};
 
-      hostedTripsData.forEach(trip => {
-        tripMap[trip.id] = trip;
-        const tripReviews = allReviews[trip.id] || [];
-        receivedReviews = [...receivedReviews, ...tripReviews.map(r => ({ ...r, tripId: trip.id }))];
-      });
+        // Fetch from Firestore first
+        const reviewsQuery = query(
+          collection(db, 'reviews'),
+          where('hostId', '==', currentUserId)
+        );
+        const querySnapshot = await getDocs(reviewsQuery);
+        const firestoreReviews = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          source: 'firestore'
+        }));
 
-      calculateStats(receivedReviews);
-      setReviews(receivedReviews.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-      setTripDetails(tripMap);
-    } else if (activeTab === 'given') {
-      // Get reviews given by current user
-      let givenReviews = [];
-      const tripMap = {};
+        hostedTripsData.forEach(trip => {
+          tripMap[trip.id] = trip;
+        });
 
-      Object.keys(allReviews).forEach(tripId => {
-        const trip = trips.find(t => t.id === tripId);
-        if (trip) {
-          tripMap[tripId] = trip;
-          const userReviews = allReviews[tripId].filter(r => r.userId === currentUser.id);
-          givenReviews = [...givenReviews, ...userReviews.map(r => ({ ...r, tripId: tripId }))];
-        }
-      });
+        // Combine Firestore reviews with local backup
+        receivedReviews = [
+          ...firestoreReviews.map(r => ({
+            ...r,
+            tripId: r.tripId,
+            timestamp: r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp
+          }))
+        ];
 
-      setReviews(givenReviews.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-      setTripDetails(tripMap);
+        // Add local reviews not in Firestore (as backup)
+        hostedTripsData.forEach(trip => {
+          const localTripReviews = localReviews[trip.id] || [];
+          localTripReviews.forEach(localReview => {
+            const exists = receivedReviews.find(r => r.id === localReview.id);
+            if (!exists) {
+              receivedReviews.push({ ...localReview, tripId: trip.id, source: 'local' });
+            }
+          });
+        });
+
+        calculateStats(receivedReviews);
+        setReviews(receivedReviews.sort((a, b) => {
+          const timeA = typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime();
+          const timeB = typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime();
+          return timeB - timeA;
+        }));
+        setTripDetails(tripMap);
+      } else if (activeTab === 'given') {
+        // Get reviews given by current user
+        let givenReviews = [];
+        const tripMap = {};
+
+        // Fetch from Firestore
+        const reviewsQuery = query(
+          collection(db, 'reviews'),
+          where('reviewerId', '==', currentUserId)
+        );
+        const querySnapshot = await getDocs(reviewsQuery);
+        const firestoreReviews = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          source: 'firestore'
+        }));
+
+        // Get trip details for reviews
+        firestoreReviews.forEach(review => {
+          const trip = trips.find(t => t.id === review.tripId);
+          if (trip) {
+            tripMap[review.tripId] = trip;
+            givenReviews.push({
+              ...review,
+              timestamp: review.timestamp?.seconds ? review.timestamp.seconds * 1000 : review.timestamp
+            });
+          }
+        });
+
+        // Add local reviews as backup
+        Object.keys(localReviews).forEach(tripId => {
+          const trip = trips.find(t => t.id === tripId);
+          if (trip) {
+            tripMap[tripId] = trip;
+            const userReviews = localReviews[tripId].filter(r => r.userId === currentUserId || r.reviewerId === currentUserId);
+            userReviews.forEach(localReview => {
+              const exists = givenReviews.find(r => r.id === localReview.id);
+              if (!exists) {
+                givenReviews.push({ ...localReview, tripId: tripId, source: 'local' });
+              }
+            });
+          }
+        });
+
+        setReviews(givenReviews.sort((a, b) => {
+          const timeA = typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime();
+          const timeB = typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime();
+          return timeB - timeA;
+        }));
+        setTripDetails(tripMap);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const calculateStats = (reviewList) => {
@@ -339,13 +445,14 @@ function Feedback({ currentUser }) {
             <div className="reviews-list">
               {filteredReviews.map(review => {
                 const trip = tripDetails[review.tripId];
+                const username = review.username || review.reviewerName || 'Anonymous';
                 return (
                   <div key={review.id} className="review-card">
                     <div className="review-header">
                       <div className="review-user-info">
-                        <div className="user-avatar">{review.username.charAt(0).toUpperCase()}</div>
+                        <div className="user-avatar">{username?.charAt(0).toUpperCase() || '?'}</div>
                         <div>
-                          <h4>{review.username}</h4>
+                          <h4>{username}</h4>
                           <p className="review-timestamp">
                             {new Date(review.timestamp).toLocaleDateString('en-US', {
                               year: 'numeric',

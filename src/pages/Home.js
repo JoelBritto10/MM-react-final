@@ -88,6 +88,7 @@ function Home({ currentUser }) {
             const tripDate = new Date(trip.date);
             const today = new Date();
             const daysUntilTrip = Math.ceil((tripDate - today) / (1000 * 60 * 60 * 24));
+            const isTripCompleted = tripDate < today; // Trip is completed if date has passed
             
             return (
               <div key={trip.id} className="trip-card">
@@ -128,8 +129,8 @@ function Home({ currentUser }) {
                       <span className="detail-text">{trip.location}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-icon">👤</span>
-                      <span className="detail-text">{trip.hostName}</span>
+                      <span className="detail-icon">🏠</span>
+                      <span className="detail-text">Hosted by <strong>{trip.hostName}</strong></span>
                     </div>
                   </div>
 
@@ -155,20 +156,29 @@ function Home({ currentUser }) {
                     {isHost ? (
                       <Link to={`/edit-trip/${trip.id}`} className="btn-secondary">✏️ Edit trip</Link>
                     ) : hasJoined ? (
-                      <>
+                      isTripCompleted ? (
                         <Link 
-                          to={`/map?tripId=${trip.id}`}
+                          to={`/trip-review/${trip.id}`}
                           className="btn-primary"
                         >
-                          🗺️ Navigate
+                          ⭐ Review Trip
                         </Link>
-                        <Link 
-                          to="/chat"
-                          className="btn-chat"
-                        >
-                          💬 Group Chat
-                        </Link>
-                      </>
+                      ) : (
+                        <>
+                          <Link 
+                            to={`/map?tripId=${trip.id}`}
+                            className="btn-primary"
+                          >
+                            🗺️ Navigate
+                          </Link>
+                          <Link 
+                            to="/chat"
+                            className="btn-chat"
+                          >
+                            💬 Group Chat
+                          </Link>
+                        </>
+                      )
                     ) : (
                       <button 
                         onClick={() => handleJoinTrip(trip)}

@@ -6,9 +6,10 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Home from './pages/Home';
-import Map from './pages/Map';
+import TripExplore from './pages/TripExplore';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
+import DestinationChat from './pages/DestinationChat';
 import TripChat from './pages/TripChat';
 import TripGroupChat from './pages/TripGroupChat';
 import Karma from './pages/Karma';
@@ -16,6 +17,8 @@ import CreateTrip from './pages/CreateTrip';
 import EditTrip from './pages/EditTrip';
 import TripReview from './pages/TripReview';
 import Feedback from './pages/Feedback';
+import TripLocationMap from './pages/TripLocationMap';
+import TripSuggestions from './pages/TripSuggestions';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -91,9 +94,12 @@ function App() {
               <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
               <Route path="/" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/home" element={isAuthenticated ? <Home currentUser={currentUser} /> : <Navigate to="/login" />} />
-              <Route path="/map" element={isAuthenticated ? <Map currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/explore" element={isAuthenticated ? <TripExplore currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/map" element={isAuthenticated ? <TripExplore currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/search" element={isAuthenticated ? <TripExplore currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/profile" element={isAuthenticated ? <Profile currentUser={currentUser} onUpdateUser={handleUpdateUser} /> : <Navigate to="/login" />} />
               <Route path="/chat" element={isAuthenticated ? <Chat currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/destination-chat/:groupId" element={isAuthenticated ? <DestinationChat currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/trip-chat/:tripId" element={isAuthenticated ? <TripChat currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/trip-group-chat/:tripId" element={isAuthenticated ? <TripGroupChat tripId={new URLSearchParams(window.location.search).get('tripId')} currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/karma" element={isAuthenticated ? <Karma currentUser={currentUser} /> : <Navigate to="/login" />} />
@@ -101,6 +107,8 @@ function App() {
               <Route path="/create-trip" element={isAuthenticated ? <CreateTrip currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/edit-trip/:id" element={isAuthenticated ? <EditTrip currentUser={currentUser} /> : <Navigate to="/login" />} />
               <Route path="/trip-review/:tripId" element={isAuthenticated ? <TripReview currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/trip-location/:tripId" element={isAuthenticated ? <TripLocationMap currentUser={currentUser} /> : <Navigate to="/login" />} />
+              <Route path="/suggestions" element={isAuthenticated ? <TripSuggestions currentUser={currentUser} /> : <Navigate to="/login" />} />
             </Routes>
           </>
         )}

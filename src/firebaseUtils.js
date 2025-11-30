@@ -302,3 +302,6 @@ export const getUserKarma = async (userId) => {
     return 0;
   }
 };
+
+// Export db for use in other components
+export { db, auth, storage };

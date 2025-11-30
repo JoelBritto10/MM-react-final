@@ -309,6 +309,16 @@
   line-height: 1.6;
 }
 
+.btn-create-trip {
+  height: 30px !important;
+  width: 60px !important;
+  padding: 0px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 30px !important;
+}
+
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
